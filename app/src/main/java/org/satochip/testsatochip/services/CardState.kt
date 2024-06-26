@@ -111,7 +111,7 @@ object CardState {
     fun <T> checkEqual(lhs: T, rhs: T, tag: String) where T : Any, T : Comparable<T> {
         if (lhs != rhs) {
             val msg = "CheckEqual failed: got $lhs but expected $rhs in $tag"
-            SatoLog.d("testSatochip", "$msg, $tag")
+            SatoLog.e("testSatochip", "$msg, $tag")
             throw Exception("test error: [$tag] $msg")
         } else {
             SatoLog.d("testSatochip", "CheckEqual ok for: $lhs")
@@ -122,7 +122,7 @@ object CardState {
         if (!lhs.contentEquals(rhs)) {
             val msg =
                 "CheckEqual failed: got ${lhs.toHexString()} but expected ${rhs.toHexString()} in $tag"
-            SatoLog.d("testSatochip", "$msg, $tag")
+            SatoLog.e("testSatochip", "$msg, $tag")
             throw Exception("test error: [$tag] $msg")
         } else {
             SatoLog.d("testSatochip", "CheckEqual ok for: ${lhs.toHexString()}")
@@ -186,8 +186,7 @@ object CardState {
 
             // check if setupDone
             if (cardStatus.isSetupDone == false) {
-                // check version: v0.1-0.1 cannot proceed further without setup first
-                println("DEBUG CardVersionInt: ${getCardVersionInt(cardStatus!!)}")
+                SatoLog.d(TAG, "CardVersionInt: ${getCardVersionInt(cardStatus)}")
                 if (getCardVersionInt(cardStatus!!) <= 0x00010001) {
                     SatoLog.d(TAG, "Satodime v0.1-0.1 requires user to claim ownership to continue!")
                     return
@@ -202,12 +201,12 @@ object CardState {
                         authenticityStatus.postValue(AuthenticityStatus.Authentic)
                     } else {
                         authenticityStatus.postValue(AuthenticityStatus.NotAuthentic)
-                        SatoLog.d(TAG, "readCard failed to authenticate card!")     // issue here.
+                        SatoLog.e(TAG, "readCard failed to authenticate card!")     // issue here.
                     }
                     certificateList.postValue(authResults.toMutableList())
                 }
             } catch (e: Exception) {
-                SatoLog.d(TAG, "Failed to authenticate card with error: $e")
+                SatoLog.e(TAG, "Failed to authenticate card with error: $e")
             }
 
             // get authentikey
@@ -218,8 +217,7 @@ object CardState {
 
             SatoLog.d("Card read successfully", "CardState.onConnection")
         } catch (error: Exception) {
-            SatoLog.d(TAG, "An error occurred: ${error.localizedMessage}")
-            SatoLog.d(TAG, "An error occurred: $error")
+            SatoLog.e(TAG, "An error occurred: $error")
         }
     }
 
@@ -241,7 +239,7 @@ object CardState {
             try {
                 respApdu = cmdSet.cardSetup(5, pinBytes) ?: respApdu
             } catch (error: Exception) {
-                SatoLog.d("testSatochip", "Start Seedkeeper tests: Error: $error")
+                SatoLog.e("testSatochip", "Start Seedkeeper tests: Error: $error")
             }
         }
         // verify PIN
@@ -706,7 +704,7 @@ object CardState {
 
         var secretSize = 1
         while (true) {
-            println("secretSize: $secretSize")
+            SatoLog.d(TAG, "secretSize: $secretSize")
             val secretBytes = byteArrayOf(
                 (secretSize shr 8).toByte(),
                 (secretSize and 0xFF).toByte()
@@ -754,20 +752,19 @@ object CardState {
                 secrets.add(secretObject)
                 fingerprints.add(seedkeeperImportSecretResult.fingerprintFromSeedkeeper.toString())
             } catch (error: Exception) {
-                println("[CardState.testSeedkeeperMemory] error during secret import: $error")
+                SatoLog.e(TAG, "An error occurred: $error")
                 break
             }
 
             // status todo: new class to hold these values?
             val rapdu = cmdSet.seedkeeperGetStatus()
-
-            println("seedkeeperStatus is successful call: ${rapdu.sw}")
+            SatoLog.d(TAG, "seedkeeperStatus is successful call: ${rapdu.sw}")
             secretSize += 1
         }
 
         // erase secrets from memory
         for (index in sids.indices) {
-            println("delete object: ${index + 1} out of ${sids.size}")
+            SatoLog.d(TAG, "delete object: ${index + 1} out of ${sids.size}")
             val sid = sids[index]
             val secretObject = secrets[index]
             val secretHeader = secretObject.secretHeader
@@ -827,7 +824,7 @@ object CardState {
 
         // final status
         val rapdu = cmdSet.seedkeeperGetStatus()
-        println("Finish: seedkeeperStatus is successful: ${rapdu.sw}")
+        SatoLog.d(TAG, "seedkeeperStatus is successful: ${rapdu.sw}")
         nbTestSuccess++
     }
 
@@ -1008,7 +1005,7 @@ object CardState {
                         "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                     )
                 } catch (error: Exception) {
-                    println("Failed to export masterseed in plaintext with error: $error")
+                    SatoLog.e(TAG, "An error occurred: $error")
                 }
 
                 // Test logs for fail
@@ -1417,7 +1414,7 @@ object CardState {
         )
         // test xpub
         for (i in paths.indices) {
-            println("Xpub Derivation $i")
+            SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector1 Xpub Derivation $i")
             val path = paths[i]
             val xpub = cmdSet.cardBip32GetXpub(path, 0x0488b21e, seedkeeperImportSecretResult.sid)
             checkEqual(
@@ -1505,7 +1502,7 @@ object CardState {
         )
         // test xpub
         for (i in paths.indices) {
-            println("Xpub Derivation $i")
+            SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector2 Xpub Derivation $i")
             val path = paths[i]
             val xpub = cmdSet.cardBip32GetXpub(path, 0x0488b21e, seedkeeperImportSecretResult.sid)
             checkEqual(
@@ -1585,7 +1582,7 @@ object CardState {
         )
         // test xpub
         for (i in paths.indices) {
-            println("Xpub Derivation $i")
+            SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector3 Xpub Derivation $i")
             val path = paths[i]
             val xpub = cmdSet.cardBip32GetXpub(path, 0x0488b21e, seedkeeperImportSecretResult.sid)
             checkEqual(

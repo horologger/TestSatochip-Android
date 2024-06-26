@@ -1,6 +1,7 @@
 package org.satochip.testsatochip
 
 import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -48,7 +49,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val context = LocalContext.current
+                    val context = LocalContext.current as Activity
+                    context.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                     viewModel.setContext(context)
                     val showNfcDialog = remember { mutableStateOf(false) } // for NfcDialog
                     // NfcDialog
@@ -60,7 +62,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     Navigation(
-                        context = context as Activity
+                        context = context
                     )
                 }
             }
