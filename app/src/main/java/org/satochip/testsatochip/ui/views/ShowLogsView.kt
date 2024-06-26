@@ -1,19 +1,32 @@
 package org.satochip.testsatochip.ui.views
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,10 +41,34 @@ import org.satochip.testsatochip.services.SatoLog
 import org.satochip.testsatochip.ui.components.HeaderRow
 import java.util.logging.Level
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun ShowLogsView(
     onClick: () -> Unit,
 ) {
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+    var selectedLogType by remember {
+        mutableStateOf(Level.ALL)
+    }
+    val logs by derivedStateOf {
+        when (selectedLogType) {
+            Level.SEVERE -> {
+                SatoLog.logList.filter {
+                    it.level == selectedLogType
+                }
+            }
+            Level.CONFIG -> {
+                SatoLog.logList.filter {
+                    it.level == selectedLogType
+                }
+            }
+            else -> {
+                SatoLog.logList
+            }
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -59,12 +96,115 @@ fun ShowLogsView(
                 },
                 titleText = R.string.testsTitle,
             )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            modifier = Modifier.clickable {
+                                expanded = true
+                            },
+                            textAlign = TextAlign.Start,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Black,
+                            text = selectedLogType.name
+                        )
+                        Icon(
+                            modifier = Modifier.size(16.dp),
+                            painter = painterResource(id = R.drawable.filter),
+                            contentDescription = "",
+                            tint = Color.Black
+                        )
+                    }
+
+                    DropdownMenu(
+                        modifier = Modifier
+                            .background(
+                                color = Color.White,
+                            ),
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            modifier = Modifier
+                                .background(
+                                    color = if (selectedLogType == Level.ALL) Color.Gray.copy(
+                                        alpha = 0.2f
+                                    ) else Color.White,
+                                ),
+                            onClick = {
+                                selectedLogType = Level.ALL
+                                expanded = false
+                            },
+                            text = {
+                                Text(
+                                    textAlign = TextAlign.Start,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Black,
+                                    text = Level.ALL.name
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            modifier = Modifier
+                                .background(
+                                    color = if (selectedLogType == Level.CONFIG) Color.Gray.copy(
+                                        alpha = 0.2f
+                                    ) else Color.White,
+                                ),
+                            onClick = {
+                                selectedLogType = Level.CONFIG
+                                expanded = false
+                            },
+                            text = {
+                                Text(
+                                    textAlign = TextAlign.Start,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Black,
+                                    text = Level.CONFIG.name
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            modifier = Modifier
+                                .background(
+                                    color = if (selectedLogType == Level.SEVERE) Color.Gray.copy(
+                                        alpha = 0.2f
+                                    ) else Color.White,
+                                ),
+                            onClick = {
+                                selectedLogType = Level.SEVERE
+                                expanded = false
+                            },
+                            text = {
+                                Text(
+                                    textAlign = TextAlign.Start,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Black,
+                                    text = Level.SEVERE.name
+                                )
+                            }
+                        )
+                    }
+                }
+            }
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                items(SatoLog.logList) { log ->
+                items(logs) { log ->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
