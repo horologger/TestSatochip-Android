@@ -35,4 +35,9 @@
     <string name="nfcSatodimeNeedsSetup">Your Satodime needs setup!</string>
     <string name="nfcResultCodeNfcError">Error during card scan</string>
 
+
+    <string name="testsTitle">Testez le Seedkeeper</string>
+    <string name="testsTitleResults">Résultats de test</string>
+    <string name="testsMessage">Essayez des tests individuels pour Seedkeeper</string>
+
 </resources>

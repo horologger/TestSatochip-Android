@@ -23,12 +23,11 @@ import org.satochip.client.seedkeeper.SeedkeeperSecretHeader
 import org.satochip.client.seedkeeper.SeedkeeperSecretObject
 import org.satochip.client.seedkeeper.SeedkeeperSecretOrigin
 import org.satochip.client.seedkeeper.SeedkeeperSecretType
-import org.satochip.client.seedkeeper.SeedkeeperStatus
 import org.satochip.client.seedkeeper.StatusWord
 import org.satochip.io.APDUResponse
 import org.satochip.testsatochip.data.AuthenticityStatus
-import org.satochip.testsatochip.data.NfcActionType
 import org.satochip.testsatochip.data.NfcResultCode
+import org.satochip.testsatochip.data.TestItems
 import java.time.Instant
 
 private const val TAG = "CardState"
@@ -59,7 +58,7 @@ object CardState {
     private lateinit var cardStatus: ApplicationStatus
 
     // to define action to perform
-    var actionType: NfcActionType = NfcActionType.DoNothing
+    var actionType: TestItems = TestItems.DoNothing
     var actionIndex: Int = 0
 
     var isConnected =
@@ -67,18 +66,18 @@ object CardState {
 
 
     fun initialize(cmdSet: SatochipCommandSet) {
-        Log.d(TAG, "initialize START")
+        SatoLog.d(TAG, "initialize START")
         CardState.cmdSet = cmdSet
         parser = cmdSet.parser
-        Log.d(TAG, "initialize action: $actionType")
-        Log.d(TAG, "initialize index: $actionIndex")
+        SatoLog.d(TAG, "initialize action: $actionType")
+        SatoLog.d(TAG, "initialize index: $actionIndex")
         resultCodeLive.postValue(NfcResultCode.Busy)
 
         onConnection()
     }
 
     fun scanCardForAction(activity: Activity) {
-        Log.d(TAG, "scanCardForAction thread START")
+        SatoLog.d(TAG, "scanCardForAction thread START")
         this.activity = activity
         val cardManager = NFCCardManager()
         cardManager.setCardListener(SatochipCardListenerForAction)
@@ -93,29 +92,29 @@ object CardState {
             NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
             null
         )
-        Log.d(TAG, "scanCardForAction thread END")
+        SatoLog.d(TAG, "scanCardForAction thread END")
     }
 
     fun disableScanForAction() {
-        Log.d(TAG, "disableScanForAction Start")
+        SatoLog.d(TAG, "disableScanForAction Start")
         if (activity != null) {
             if (activity?.isFinishing() == true) {
-                Log.e(TAG, "NFCCardService disableScanForAction activity isFinishing()")
+                SatoLog.e(TAG, "NFCCardService disableScanForAction activity isFinishing()")
                 return;
             }
             val nfcAdapter = NfcAdapter.getDefaultAdapter(activity)
             nfcAdapter?.disableReaderMode(activity)
-            Log.d(TAG, "disableScanForAction disableReaderMode!")
+            SatoLog.d(TAG, "disableScanForAction disableReaderMode!")
         }
     }
 
     fun <T> checkEqual(lhs: T, rhs: T, tag: String) where T : Any, T : Comparable<T> {
         if (lhs != rhs) {
             val msg = "CheckEqual failed: got $lhs but expected $rhs in $tag"
-            Log.d("testSatochip", "$msg, $tag")
+            SatoLog.d("testSatochip", "$msg, $tag")
             throw Exception("test error: [$tag] $msg")
         } else {
-            Log.d("testSatochip", "CheckEqual ok for: $lhs")
+            SatoLog.d("testSatochip", "CheckEqual ok for: $lhs")
         }
     }
 
@@ -123,10 +122,10 @@ object CardState {
         if (!lhs.contentEquals(rhs)) {
             val msg =
                 "CheckEqual failed: got ${lhs.toHexString()} but expected ${rhs.toHexString()} in $tag"
-            Log.d("testSatochip", "$msg, $tag")
+            SatoLog.d("testSatochip", "$msg, $tag")
             throw Exception("test error: [$tag] $msg")
         } else {
-            Log.d("testSatochip", "CheckEqual ok for: ${lhs.toHexString()}")
+            SatoLog.d("testSatochip", "CheckEqual ok for: ${lhs.toHexString()}")
         }
     }
 
@@ -171,7 +170,7 @@ object CardState {
     //Card connection
     @RequiresApi(Build.VERSION_CODES.O)
     fun onConnection() {
-        Log.d("Start card reading", "CardState.onConnection")
+        SatoLog.d("Start card reading", "CardState.onConnection")
         parser = cmdSet.parser
 
         try {
@@ -181,7 +180,7 @@ object CardState {
             cardStatus = cmdSet.applicationStatus ?: return
             cardStatus = ApplicationStatus(rapduStatus)
 
-            Log.d("testSatochip", "card status: $cardStatus")
+            SatoLog.d("testSatochip", "card status: $cardStatus")
 
             testSeedkeeper()
 
@@ -190,7 +189,7 @@ object CardState {
                 // check version: v0.1-0.1 cannot proceed further without setup first
                 println("DEBUG CardVersionInt: ${getCardVersionInt(cardStatus!!)}")
                 if (getCardVersionInt(cardStatus!!) <= 0x00010001) {
-                    Log.d(TAG, "Satodime v0.1-0.1 requires user to claim ownership to continue!")
+                    SatoLog.d(TAG, "Satodime v0.1-0.1 requires user to claim ownership to continue!")
                     return
                 }
             }
@@ -203,31 +202,31 @@ object CardState {
                         authenticityStatus.postValue(AuthenticityStatus.Authentic)
                     } else {
                         authenticityStatus.postValue(AuthenticityStatus.NotAuthentic)
-                        Log.d(TAG, "readCard failed to authenticate card!")     // issue here.
+                        SatoLog.d(TAG, "readCard failed to authenticate card!")     // issue here.
                     }
                     certificateList.postValue(authResults.toMutableList())
                 }
             } catch (e: Exception) {
-                Log.d(TAG, "Failed to authenticate card with error: $e")
+                SatoLog.d(TAG, "Failed to authenticate card with error: $e")
             }
 
             // get authentikey
             val respApdu = cmdSet.cardGetAuthentikey()
             // todo: get authentikey
-            Log.d(TAG, "authentikeyHex: $authentikeyHex")
+            SatoLog.d(TAG, "authentikeyHex: $authentikeyHex")
             isCardDataAvailable = true
 
-            Log.d("Card read successfully", "CardState.onConnection")
+            SatoLog.d("Card read successfully", "CardState.onConnection")
         } catch (error: Exception) {
-            Log.d(TAG, "An error occurred: ${error.localizedMessage}")
-            Log.d(TAG, "An error occurred: $error")
+            SatoLog.d(TAG, "An error occurred: ${error.localizedMessage}")
+            SatoLog.d(TAG, "An error occurred: $error")
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Throws(Exception::class)
     fun testSeedkeeper() {
-        Log.d("testSatochip", "Start Seedkeeper tests")
+        SatoLog.d("testSatochip", "Start Seedkeeper tests")
         val cardStatus = cmdSet.applicationStatus ?: return
         val pinString = "123456"
         val pinBytes = pinString.toByteArray(Charsets.UTF_8)
@@ -242,7 +241,7 @@ object CardState {
             try {
                 respApdu = cmdSet.cardSetup(5, pinBytes) ?: respApdu
             } catch (error: Exception) {
-                Log.d("testSatochip", "Start Seedkeeper tests: Error: $error")
+                SatoLog.d("testSatochip", "Start Seedkeeper tests: Error: $error")
             }
         }
         // verify PIN
@@ -251,37 +250,73 @@ object CardState {
         // from android 8 and above
         val startTime = Instant.now()
 
-        //Test
-        testSeedkeeperMemory()
-        testGenerateMasterseed()
-        testGenerateRandomSecret()
-        testImportExportSecretPlain()
-        testImportExportSecretEncrypted()
-        testBip39MnemonicV2()
-        testCardBip32GetExtendedkeySeedVector1()
-        testCardBip32GetExtendedkeySeedVector2()
-        testCardBip32GetExtendedkeySeedVector3()
-//        testCardBip32GetExtendedkeyBip85()
-        resetSecrets()
-
+        when (actionType) {
+            TestItems.ScanCard -> {
+                testSeedkeeperMemory()
+                testGenerateMasterseed()
+                testGenerateRandomSecret()
+                testImportExportSecretPlain()
+                testImportExportSecretEncrypted()
+                testBip39MnemonicV2()
+                testCardBip32GetExtendedkeySeedVector1()
+                testCardBip32GetExtendedkeySeedVector2()
+                testCardBip32GetExtendedkeySeedVector3()
+//                testCardBip32GetExtendedkeyBip85()
+                resetSecrets()
+            }
+            TestItems.SeedKeeperMemory -> {
+                testSeedkeeperMemory()
+            }
+            TestItems.GenerateMasterSeed -> {
+                testGenerateMasterseed()
+            }
+            TestItems.GenerateRandomSecret -> {
+                testGenerateRandomSecret()
+            }
+            TestItems.ImportExportSecretPlain -> {
+                testImportExportSecretPlain()
+            }
+            TestItems.ImportExportSecretEncrypted -> {
+                testImportExportSecretEncrypted()
+            }
+            TestItems.Bip39MnemonicV2 -> {
+                testBip39MnemonicV2()
+            }
+            TestItems.CardBip32GetExtendedKeySeedVector1 -> {
+                testCardBip32GetExtendedkeySeedVector1()
+            }
+            TestItems.CardBip32GetExtendedKeySeedVector2 -> {
+                testCardBip32GetExtendedkeySeedVector2()
+            }
+            TestItems.CardBip32GetExtendedKeySeedVector3 -> {
+                testCardBip32GetExtendedkeySeedVector3()
+            }
+            TestItems.CardBip32GetExtendedKeyBip85 -> {
+                testCardBip32GetExtendedkeyBip85()
+            }
+            TestItems.ResetSecrets -> {
+                resetSecrets()
+            }
+            else -> {}
+        }
 
         // from android 8 and above
         val endTime = Instant.now()
         // Info after tests finished
-        Log.d(TAG, "tests finished, total : $nbTestTotal, success: $nbTestSuccess")
-        Log.d(TAG, "time tests began: $startTime, time tests finished: $endTime")
+        SatoLog.d(TAG, "tests finished, total : $nbTestTotal, success: $nbTestSuccess")
+        SatoLog.d(TAG, "time tests began: $startTime, time tests finished: $endTime")
         nbTestSuccess = 0
         nbTestTotal = 0
 
-
+        resultCodeLive.postValue(NfcResultCode.Ok)
     }
 
     @Throws(Exception::class)
     fun testGenerateMasterseed() {
-        Log.d(TAG, "start testGenerateMasterseed")
+        SatoLog.d(TAG, "start testGenerateMasterseed")
         nbTestTotal++
         for (seedSize in 16..64 step 16) {
-            Log.d(TAG, "seedSize: $seedSize")
+            SatoLog.d(TAG, "seedSize: $seedSize")
 
             val exportRights = SeedkeeperExportRights.EXPORT_PLAINTEXT_ALLOWED
             val label = "Test masterseed $seedSize export-allowed"
@@ -393,7 +428,7 @@ object CardState {
                     ?: continue
                 checkEqual(rapdu.sw, StatusWord.OK.value, tag = "testGenerateMasterseed")
             } else {
-                Log.d(
+                SatoLog.d(
                     TAG,
                     "Seedkeeper v${cardStatus?.protocolVersion}: Erasing secret not supported!"
                 )
@@ -406,7 +441,7 @@ object CardState {
     fun testGenerateRandomSecret() {
         //introduced in Seedkeeper v0.2
         if ((cardStatus.protocolVersion ?: 0) < 0x0002) {
-            Log.d(
+            SatoLog.d(
                 TAG,
                 "Seedkeeper v${cardStatus.protocolVersion}:" +
                         " generate random_secret with external entropy not supported!"
@@ -529,7 +564,7 @@ object CardState {
 
 
     fun testImportExportSecretPlain() {
-        Log.d(TAG, "start testImportExportSecretPlain")
+        SatoLog.d(TAG, "start testImportExportSecretPlain")
         nbTestTotal++
 
         val bip39_12 = generateMnemonic(128)
@@ -539,15 +574,15 @@ object CardState {
 
         for (index in bip39s.indices) {
             val bip39String = bip39s[index]
-            Log.d(TAG, "first item: $bip39String")
+            SatoLog.d(TAG, "first item: $bip39String")
 
             val secretBytes: ByteArray =
                 byteArrayOf(bip39String.toByteArray().size.toByte()) + bip39String.toByteArray()
-            Log.d(TAG, "first secretBytes: ${secretBytes.size}")
+            SatoLog.d(TAG, "first secretBytes: ${secretBytes.size}")
 
             val secretFingerprintBytes = SeedkeeperSecretHeader.getFingerprintBytes(secretBytes)
 
-            Log.d(TAG, "first secretFingerprintBytes: $secretFingerprintBytes")
+            SatoLog.d(TAG, "first secretFingerprintBytes: $secretFingerprintBytes")
 
             val label = "Test BIP39 size:${12 + index * 6}"
             val secretHeader = SeedkeeperSecretHeader(
@@ -562,18 +597,18 @@ object CardState {
                 secretFingerprintBytes,
                 label
             )
-            Log.d(TAG, "first header: $secretFingerprintBytes")
+            SatoLog.d(TAG, "first header: $secretFingerprintBytes")
 
             val secretObject =
                 SeedkeeperSecretObject(secretBytes, secretHeader, false, null)
-            Log.d(
+            SatoLog.d(
                 TAG,
                 "first secretObject: $secretObject, ${secretObject.secretHeader.fingerprintBytes.size}"
             )
 
             val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
                 cmdSet.seedkeeperImportSecret(secretObject)
-            Log.d(TAG, "first seedkeeperImportSecretResult: $seedkeeperImportSecretResult")
+            SatoLog.d(TAG, "first seedkeeperImportSecretResult: $seedkeeperImportSecretResult")
 
             checkEqual(
                 seedkeeperImportSecretResult.apduResponse.sw,
@@ -642,7 +677,7 @@ object CardState {
                     "Function: testImportExportSecretPlain, line: ${Exception().stackTrace[0].lineNumber}"
                 )
             } else {
-                Log.d(
+                SatoLog.d(
                     TAG,
                     "Seedkeeper v${cardStatus.protocolVersion}: Erasing secret not supported!"
                 )
@@ -654,12 +689,12 @@ object CardState {
     @Throws(Exception::class)
     fun testSeedkeeperMemory() {
         // WARNING: this test will fill all the card available memory
-        Log.d(TAG, "start testSeedkeeperMemory")
+        SatoLog.d(TAG, "start testSeedkeeperMemory")
         nbTestTotal++
 
         // introduced in Seedkeeper v0.2
         if (cardStatus.protocolVersion < 0x0002) {
-            Log.d(
+            SatoLog.d(
                 TAG,
                 "testSeedkeeperMemory: Seedkeeper v${cardStatus.protocolVersion}: delete secret not supported!!"
             )
@@ -798,10 +833,10 @@ object CardState {
 
     fun resetSecrets() {
         nbTestTotal++
-        Log.d(TAG, "Start resetSecrets")
+        SatoLog.d(TAG, "Start resetSecrets")
         val headers: List<SeedkeeperSecretHeader> = cmdSet.seedkeeperListSecretHeaders()
         for (header in headers) {
-            Log.d(TAG, "resetSecrets Header sid: ${header.sid} comencing deletion")
+            SatoLog.d(TAG, "resetSecrets Header sid: ${header.sid} comencing deletion")
 
             val rapdu = cmdSet.seedkeeperResetSecret(header.sid)
             checkEqual(
@@ -809,14 +844,14 @@ object CardState {
                 StatusWord.OK.value,
                 tag = "Function: resetSecrets, line: ${Exception().stackTrace[0].lineNumber}"
             )
-            Log.d(TAG, "resetSecrets Header sid: ${header.sid} delete successful")
+            SatoLog.d(TAG, "resetSecrets Header sid: ${header.sid} delete successful")
         }
         nbTestSuccess++
     }
 
     fun testImportExportSecretEncrypted() {
         nbTestTotal++
-        Log.d(TAG, "Start testImportExportSecretEncrypted")
+        SatoLog.d(TAG, "Start testImportExportSecretEncrypted")
         try {
             // Get authentikey then import it in plaintext
             val authentikeyObject: AuthentikeyObject = cmdSet.cardGetSeedkeeperAuthentikey()
@@ -1149,7 +1184,7 @@ object CardState {
                         "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                     )
                 } else {
-                    Log.d(
+                    SatoLog.d(
                         TAG,
                         "Seedkeeper v${cardStatus.protocolVersion}: Erasing secret not supported!"
                     )
@@ -1165,7 +1200,7 @@ object CardState {
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
             } else {
-                Log.d(
+                SatoLog.d(
                     TAG,
                     "Seedkeeper v${cardStatus.protocolVersion}: Erasing secret not supported!"
                 )
@@ -1178,7 +1213,7 @@ object CardState {
 
     fun testBip39MnemonicV2() {
         if ((cardStatus.protocolVersion ?: 0) < 0x0002) {
-            Log.d(
+            SatoLog.d(
                 TAG,
                 "Seedkeeper v${cardStatus.protocolVersion}:" +
                         " generate random_secret with external entropy not supported!"
@@ -1186,7 +1221,7 @@ object CardState {
             return
         }
         nbTestTotal++
-        Log.d(TAG, "Start testBip39MnemonicV2")
+        SatoLog.d(TAG, "Start testBip39MnemonicV2")
         val entropySizes = listOf(128, 192, 256)
         val passphrases = listOf("", "", "IveComeToTalkWithYouAgain")
 
@@ -1194,13 +1229,13 @@ object CardState {
             val entropySize = entropySizes[index]
             val entropy = ByteArray(entropySize / 8)
             java.security.SecureRandom().nextBytes(entropy)
-            Log.d(TAG, "randomEntropyHex is $entropy")
+            SatoLog.d(TAG, "randomEntropyHex is $entropy")
 
             val bip39String = MnemonicCode.INSTANCE.toMnemonic(entropy).joinToString(" ")
-            Log.d(TAG, "bip39String is $bip39String")
+            SatoLog.d(TAG, "bip39String is $bip39String")
 
             val entropyBytes = MnemonicCode.INSTANCE.toEntropy(stringToList(bip39String))
-            Log.d(TAG, "entropyBytes is $entropyBytes")
+            SatoLog.d(TAG, "entropyBytes is $entropyBytes")
 
             checkByteArrayEqual(
                 entropyBytes,
@@ -1305,7 +1340,7 @@ object CardState {
                     "Function: testBip39MnemonicV2, line: ${Exception().stackTrace[0].lineNumber}"
                 )
             } else {
-                Log.d(
+                SatoLog.d(
                     TAG,
                     "Seedkeeper v${cardStatus.protocolVersion}: Erasing secret not supported!"
                 )
@@ -1317,11 +1352,11 @@ object CardState {
     @OptIn(ExperimentalStdlibApi::class)
     fun testCardBip32GetExtendedkeySeedVector1() {
         nbTestTotal++
-        Log.d(TAG, "Start testCardBip32GetExtendedkeySeedVector1")
+        SatoLog.d(TAG, "Start testCardBip32GetExtendedkeySeedVector1")
 
         // introduced in Seedkeeper v0.2
         if (cardStatus.protocolVersion < 0x0002) {
-            Log.d(TAG, "testCardBip32GetExtendedkeySeedVector1: BIP32 derivation not supported!")
+            SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector1: BIP32 derivation not supported!")
         }
 
         // create a secret
@@ -1404,11 +1439,11 @@ object CardState {
     @OptIn(ExperimentalStdlibApi::class)
     fun testCardBip32GetExtendedkeySeedVector2() {
         nbTestTotal++
-        Log.d(TAG, "Start testCardBip32GetExtendedkeySeedVector2")
+        SatoLog.d(TAG, "Start testCardBip32GetExtendedkeySeedVector2")
 
         // introduced in Seedkeeper v0.2
         if (cardStatus.protocolVersion < 0x0002) {
-            Log.d(TAG, "testCardBip32GetExtendedkeySeedVector2: BIP32 derivation not supported!")
+            SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector2: BIP32 derivation not supported!")
         }
 
         // create a secret
@@ -1492,11 +1527,11 @@ object CardState {
     @OptIn(ExperimentalStdlibApi::class)
     fun testCardBip32GetExtendedkeySeedVector3() {
         nbTestTotal++
-        Log.d(TAG, "Start testCardBip32GetExtendedkeySeedVector3")
+        SatoLog.d(TAG, "Start testCardBip32GetExtendedkeySeedVector3")
 
         // introduced in Seedkeeper v0.2
         if (cardStatus.protocolVersion < 0x0002) {
-            Log.d(TAG, "testCardBip32GetExtendedkeySeedVector3: BIP32 derivation not supported!")
+            SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector3: BIP32 derivation not supported!")
         }
 
         // create a secret
@@ -1572,11 +1607,11 @@ object CardState {
     @OptIn(ExperimentalStdlibApi::class)
     fun testCardBip32GetExtendedkeyBip85() {
         nbTestTotal++
-        Log.d(TAG, "Start testCardBip32GetExtendedkeyBip85")
+        SatoLog.d(TAG, "Start testCardBip32GetExtendedkeyBip85")
 
         // introduced in Seedkeeper v0.2
         if (cardStatus.protocolVersion < 0x0002) {
-            Log.d(TAG, "testCardBip32GetExtendedkeyBip85: BIP32 derivation not supported!")
+            SatoLog.d(TAG, "testCardBip32GetExtendedkeyBip85: BIP32 derivation not supported!")
         }
 
         val bip39 =
@@ -1589,7 +1624,7 @@ object CardState {
         val path = "m/83696968'/39'/0'/12'/0'"
 
         val entropyBytes = MnemonicCode.INSTANCE.toEntropy(stringToList(bip39))
-        Log.d(TAG, "testCardBip32GetExtendedkeyBip85: entropyHex: ${entropyBytes.toHexString()}")
+        SatoLog.d(TAG, "testCardBip32GetExtendedkeyBip85: entropyHex: ${entropyBytes.toHexString()}")
         val passphraseBytes = ByteArray(0)
 
         var secretBytes = byteArrayOf(masterseedBytes.size.toByte()) + masterseedBytes
@@ -1621,8 +1656,13 @@ object CardState {
         )
 
         // import secret
-        val seedkeeperImportSecretResult: SeedkeeperImportSecretResult = cmdSet.seedkeeperImportSecret(secretObject)
-        checkEqual(seedkeeperImportSecretResult.apduResponse.sw, StatusWord.OK.value, "Function: testCardBip32GetExtendedkeyBip85")
+        val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
+            cmdSet.seedkeeperImportSecret(secretObject)
+        checkEqual(
+            seedkeeperImportSecretResult.apduResponse.sw,
+            StatusWord.OK.value,
+            "Function: testCardBip32GetExtendedkeyBip85"
+        )
         checkByteArrayEqual(
             seedkeeperImportSecretResult.fingerprintFromSeedkeeper,
             secretFingerprintBytes,
@@ -1630,7 +1670,8 @@ object CardState {
         )
 
         // export secret
-        val exportedSecretObject = cmdSet.seedkeeperExportSecret(seedkeeperImportSecretResult.sid, null)
+        val exportedSecretObject =
+            cmdSet.seedkeeperExportSecret(seedkeeperImportSecretResult.sid, null)
         val exportedSecretHeader = exportedSecretObject.secretHeader
         checkEqual(
             exportedSecretHeader.type,
@@ -1679,14 +1720,24 @@ object CardState {
             0x04.toByte(),
             exportedSecretHeader.sid
         )
-        Log.d(TAG, "testCardBip32GetExtendedkeyBip85: bip85EntropyBytes:  ${cmdSet.extendedKey.toHexString()}")
+        SatoLog.d(
+            TAG,
+            "testCardBip32GetExtendedkeyBip85: bip85EntropyBytes:  ${cmdSet.extendedKey.toHexString()}"
+        )
 
-        val bip85EntropyBytes = cmdSet.extendedKey.copyOfRange(0,16)
-        Log.d(TAG, "testCardBip32GetExtendedkeyBip85: bip85EntropyBytes: ${bip85EntropyBytes.toHexString()}")
+        val bip85EntropyBytes = cmdSet.extendedKey.copyOfRange(0, 16)
+        SatoLog.d(
+            TAG,
+            "testCardBip32GetExtendedkeyBip85: bip85EntropyBytes: ${bip85EntropyBytes.toHexString()}"
+        )
 
         val bip39FromBip85 = MnemonicCode.INSTANCE.toMnemonic(bip85EntropyBytes)
-        Log.d(TAG, "testCardBip32GetExtendedkeyBip85: bip39Frombip85: $bip39FromBip85")
-        checkEqual(bip39FromBip85.joinToString(separator = " "), bip39bip85, "Function: testCardBip32GetExtendedkeyBip85")
+        SatoLog.d(TAG, "testCardBip32GetExtendedkeyBip85: bip39Frombip85: $bip39FromBip85")
+        checkEqual(
+            bip39FromBip85.joinToString(separator = " "),
+            bip39bip85,
+            "Function: testCardBip32GetExtendedkeyBip85"
+        )
 
         // delete masterseed
         val rapdu = cmdSet.seedkeeperResetSecret(seedkeeperImportSecretResult.sid)
