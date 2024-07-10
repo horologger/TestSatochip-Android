@@ -20,7 +20,8 @@ import org.satochip.testsatochip.ui.components.ScanButton
 
 @Composable
 fun HomeView(
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onClickTestsButton: () -> Unit
 ) {
 
     Box(
@@ -43,7 +44,9 @@ fun HomeView(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HomeHeaderRow(
-                onClick = {},
+                onClick = {
+                    onClickTestsButton()
+                },
             )
             ScanButton(
                 text = R.string.scan
