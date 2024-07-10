@@ -1,0 +1,39 @@
+<resources>
+    <string name="app_name">TestSatochip</string>
+    <string name="scan">Click\n&amp;\nScan</string>
+    <string name="nfcHoldSeedkeeper">Hold your Seedkeeper near your phone</string>
+
+
+    <string name="readyToScan">Ready to Scan</string>
+    <string name="listedVaults">Listed vaults successfully!</string>
+    <string name="scanning">Scanning</string>
+    <string name="unknownError">Unknown error!</string>
+    <string name="nfcTitleWarning">Warning</string>
+    <string name="nfcTitleSuccess"></string>
+    <string name="nfcResultCodeNone">None</string>
+    <string name="nfcResultCodeBusy">Busy</string>
+    <string name="nfcOk">Operation successful!</string>
+    <string name="nfcCardMismatch">Card mismatch! \nIs this the correct card?</string>
+    <string name="nfcOwnershipTransferSuccess">Ownership transfer initiated successfully!</string>
+    <string name="nfcOwnershiptTransferFailed">Failed to transfer ownership</string>
+    <string name="nfcErrorOccured">An error occured, please try again</string>
+    <string name="nfcPrivkeyRecoverSuccess">Vault privkey recovered successfully!</string>
+    <string name="nfcPrivkeyRecoverFailed">Failed to recover vault private key</string>
+    <string name="nfcNeedsFirstVaults">This card needs to setup a first vault</string>
+    <string name="nfcVaultsListSuccess">Listed vaults successfully!</string>
+    <string name="nfcVaultsListFailed">Failed to list vaults</string>
+    <string name="nfcOwnershipAcceptSuccess">Card ownership accepted successfully!</string>
+    <string name="nfcOwnershipAcceptFailed">Failed to accept card ownership</string>
+    <string name="nfcTransferAlreadyDone">Card transfer already done!</string>
+    <string name="nfcVaultSealedSuccess">Vault sealed successfully!</string>
+    <string name="nfcVaultSealedFailed">Failed to seal vault</string>
+    <string name="nfcVaultResetSuccess">Vault reset successfully!</string>
+    <string name="nfcVaultResetFailed">Failed to reset vault slot</string>
+    <string name="nfcVaultUnsealSuccess">Vault unsealed successfully!</string>
+    <string name="nfcVaultUnsealFailed">Failed to unseal vault</string>
+    <string name="nfcUnlockSecretNotFound">You are not owner of this card on this device.</string>
+    <string name="nfcSatodimeNeedsSetup">Your Satodime needs setup!</string>
+    <string name="nfcResultCodeNfcError">Error during card scan</string>
+
+
+</resources>
