@@ -2,7 +2,6 @@ package org.satochip.testsatochip.viewmodels
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.Application
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -11,14 +10,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import org.satochip.client.SatochipCommandSet
-import org.satochip.io.CardChannel
-import org.satochip.testsatochip.data.NfcActionType
 import org.satochip.testsatochip.data.NfcResultCode
+import org.satochip.testsatochip.data.TestItems
 import org.satochip.testsatochip.services.CardState
 
 private const val TAG = "TestSatochipViewModel"
-
 
 class TestSatochipViewModel() : ViewModel() {
 
@@ -43,8 +39,8 @@ class TestSatochipViewModel() : ViewModel() {
         CardState.context = context
     }
 
-    fun scanCard(activity: Activity) {
-        CardState.actionType = NfcActionType.ScanCard
+    fun doTests(activity: Activity, testItem: TestItems) {
+        CardState.actionType = testItem
         scanCardForAction(activity)
     }
 
