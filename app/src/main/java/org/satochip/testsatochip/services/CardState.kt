@@ -696,6 +696,7 @@ object CardState {
                 TAG,
                 "testSeedkeeperMemory: Seedkeeper v${cardStatus.protocolVersion}: delete secret not supported!!"
             )
+            return
         }
 
         val sids = mutableListOf<Int>()
@@ -1354,6 +1355,7 @@ object CardState {
         // introduced in Seedkeeper v0.2
         if (cardStatus.protocolVersion < 0x0002) {
             SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector1: BIP32 derivation not supported!")
+            return
         }
 
         // create a secret
@@ -1441,6 +1443,7 @@ object CardState {
         // introduced in Seedkeeper v0.2
         if (cardStatus.protocolVersion < 0x0002) {
             SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector2: BIP32 derivation not supported!")
+            return
         }
 
         // create a secret
@@ -1529,6 +1532,7 @@ object CardState {
         // introduced in Seedkeeper v0.2
         if (cardStatus.protocolVersion < 0x0002) {
             SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector3: BIP32 derivation not supported!")
+            return
         }
 
         // create a secret
@@ -1609,6 +1613,7 @@ object CardState {
         // introduced in Seedkeeper v0.2
         if (cardStatus.protocolVersion < 0x0002) {
             SatoLog.d(TAG, "testCardBip32GetExtendedkeyBip85: BIP32 derivation not supported!")
+            return
         }
 
         val bip39 =

@@ -73,17 +73,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     //satochip libraries
-//    implementation files('libs/satochip-lib-0.0.4.jar')
     implementation(files("libs/satochip-lib-0.0.4.jar"))
-    implementation(files("libs/javacryptotools-0.3.0.jar"))
     implementation(files("libs/satochip-android-0.0.2.jar"))
 
     //satochip-android & satochip-lib related dependencies
-//    implementation("org.bouncycastle:bcprov-jdk15on:1.70")
     implementation("org.bitcoinj:bitcoinj-core:0.16.2")
-
-    //javacryptotools related dependencies
-    implementation("com.google.guava:guava:32.1.2-jre")
-
-
 }
