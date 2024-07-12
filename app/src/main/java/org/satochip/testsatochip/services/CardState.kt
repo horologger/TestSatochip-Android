@@ -5,18 +5,15 @@ import android.app.Activity
 import android.content.Context
 import android.nfc.NfcAdapter
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import org.bitcoinj.crypto.MnemonicCode
 import org.satochip.android.NFCCardManager
 import org.satochip.client.ApplicationStatus
-import org.satochip.client.AuthentikeyObject
 import org.satochip.client.Constants
 import org.satochip.client.SatochipCommandSet
 import org.satochip.client.SatochipParser
 import org.satochip.client.seedkeeper.SeedkeeperExportRights
-import org.satochip.client.seedkeeper.SeedkeeperImportSecretResult
 import org.satochip.client.seedkeeper.SeedkeeperLog
 import org.satochip.client.seedkeeper.SeedkeeperMasterSeedResult
 import org.satochip.client.seedkeeper.SeedkeeperSecretHeader
@@ -318,16 +315,16 @@ object CardState {
 
             val exportRights = SeedkeeperExportRights.EXPORT_PLAINTEXT_ALLOWED
             val label = "Test masterseed $seedSize export-allowed"
-            val seedkeeperMasterSeedResult = cmdSet.seedkeeperGenerateMasterseed(
+            val seedkeeperSecretHeader = cmdSet.seedkeeperGenerateMasterseed(
                 seedSize,
                 exportRights,
                 label
             ) ?: continue
-            checkEqual(
-                seedkeeperMasterSeedResult.apduResponse.sw,
-                StatusWord.OK.value,
-                tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
-            )
+//            checkEqual(
+//                seedkeeperMasterSeedResult.apduResponse.sw,
+//                StatusWord.OK.value,
+//                tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
+//            )
 
             // check last log
             var logs: List<SeedkeeperLog> = cmdSet.seedkeeperPrintLogs(false) ?: continue
@@ -340,7 +337,7 @@ object CardState {
             )
             checkEqual(
                 lastLog.sid1,
-                seedkeeperMasterSeedResult.headers[0].sid,
+                seedkeeperSecretHeader.sid,
                 tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
             )
             checkEqual(lastLog.sid2, 0xFFFF, tag = "testGenerateMasterseed")
@@ -348,43 +345,43 @@ object CardState {
 
             // export secret and check fingerprint
             val secretObject =
-                cmdSet.seedkeeperExportSecret(seedkeeperMasterSeedResult.headers[0].sid, null)
+                cmdSet.seedkeeperExportSecret(seedkeeperSecretHeader.sid, null)
                     ?: continue
             val exportedHeader = secretObject.secretHeader
             checkEqual(
                 exportedHeader.sid,
-                seedkeeperMasterSeedResult.headers[0].sid,
+                seedkeeperSecretHeader.sid,
                 tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
             )
             checkEqual(
                 exportedHeader.type,
-                seedkeeperMasterSeedResult.headers[0].type,
+                seedkeeperSecretHeader.type,
                 tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
             )
             checkEqual(
                 exportedHeader.origin,
-                seedkeeperMasterSeedResult.headers[0].origin,
+                seedkeeperSecretHeader.origin,
                 tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
             )
             checkEqual(
                 exportedHeader.exportRights,
-                seedkeeperMasterSeedResult.headers[0].exportRights,
+                seedkeeperSecretHeader.exportRights,
                 tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
             )
             checkByteArrayEqual(
                 exportedHeader.fingerprintBytes,
-                seedkeeperMasterSeedResult.headers[0].fingerprintBytes,
+                seedkeeperSecretHeader.fingerprintBytes,
                 tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
             )
 //            checkEqual(exportedHeader.rfu2, header.rfu2, tag = "testGenerateMasterseed")
             checkEqual(
                 exportedHeader.subtype,
-                seedkeeperMasterSeedResult.headers[0].subtype,
+                seedkeeperSecretHeader.subtype,
                 tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
             )
             checkEqual(
                 exportedHeader.label,
-                seedkeeperMasterSeedResult.headers[0].label,
+                seedkeeperSecretHeader.label,
                 tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
             )
 
@@ -422,7 +419,7 @@ object CardState {
             // erase secret if supported
             cardStatus.cardVersionInt
             if (cardStatus.protocolVersion >= 0x0002) {
-                val rapdu = cmdSet.seedkeeperResetSecret(seedkeeperMasterSeedResult.headers[0].sid)
+                val rapdu = cmdSet.seedkeeperResetSecret(seedkeeperSecretHeader.sid)
                     ?: continue
                 checkEqual(rapdu.sw, StatusWord.OK.value, tag = "testGenerateMasterseed")
             } else {
@@ -460,7 +457,7 @@ object CardState {
             val saveEntropy = true
 
             // generate on card
-            val seedkeeperMasterSeedResult = cmdSet.seedkeeperGenerateRandomSecret(
+            val seedkeeperSecretHeaders = cmdSet.seedkeeperGenerateRandomSecret(
                 stype,
                 subtype,
                 size.toByte(),
@@ -469,14 +466,9 @@ object CardState {
                 exportRights,
                 label
             ) ?: continue
-            checkEqual(
-                seedkeeperMasterSeedResult.apduResponse.sw,
-                StatusWord.OK.value,
-                tag = "Function: testGenerateRandomSecret, line: ${Exception().stackTrace[0].lineNumber}"
-            )
 
             // export master password in plaintext
-            val secretHeader = seedkeeperMasterSeedResult.headers[0]
+            val secretHeader = seedkeeperSecretHeaders[0]
             val secretObject = cmdSet.seedkeeperExportSecret(secretHeader.sid, null) ?: continue
             var exportedHeader = secretObject.secretHeader
             checkEqual(
@@ -604,24 +596,23 @@ object CardState {
                 "first secretObject: $secretObject, ${secretObject.secretHeader.fingerprintBytes.size}"
             )
 
-            val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
-                cmdSet.seedkeeperImportSecret(secretObject)
-            SatoLog.d(TAG, "first seedkeeperImportSecretResult: $seedkeeperImportSecretResult")
+            val seedkeeperSecretImportHeader = cmdSet.seedkeeperImportSecret(secretObject)
+            SatoLog.d(TAG, "first seedkeeperImportSecretResult: $seedkeeperSecretImportHeader")
 
-            checkEqual(
-                seedkeeperImportSecretResult.apduResponse.sw,
-                StatusWord.OK.value,
-                "Function: testImportExportSecretPlain, line: ${Exception().stackTrace[0].lineNumber}"
-            )
+//            checkEqual(
+//                seedkeeperImportSecretResult.apduResponse.sw,
+//                StatusWord.OK.value,
+//                "Function: testImportExportSecretPlain, line: ${Exception().stackTrace[0].lineNumber}"
+//            )
             checkByteArrayEqual(
-                seedkeeperImportSecretResult.fingerprintFromSeedkeeper,
+                seedkeeperSecretImportHeader.fingerprintBytes,
                 secretFingerprintBytes,
                 "Function: testImportExportSecretPlain, line: ${Exception().stackTrace[0].lineNumber}"
             )
 
             // export secret
             val exportedSecretObject =
-                cmdSet.seedkeeperExportSecret(seedkeeperImportSecretResult.sid, null)
+                cmdSet.seedkeeperExportSecret(seedkeeperSecretImportHeader.sid, null)
             val exportedSecretHeader = exportedSecretObject.secretHeader
             checkEqual(
                 exportedSecretHeader.type,
@@ -735,31 +726,25 @@ object CardState {
             )
             // import secret
             try {
-                val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
-                    cmdSet.seedkeeperImportSecret(
+                val seedkeeperSecretHeader = cmdSet.seedkeeperImportSecret(
                         secretObject
                     )
-                checkEqual(
-                    seedkeeperImportSecretResult.apduResponse.sw,
-                    StatusWord.OK.value,
-                    tag = "Function: testSeedkeeperMemory, line: ${Exception().stackTrace[0].lineNumber}"
-                )
                 checkByteArrayEqual(
-                    seedkeeperImportSecretResult.fingerprintFromSeedkeeper,
+                    seedkeeperSecretHeader.fingerprintBytes,
                     secretFingerprintBytes,
                     tag = "Function: testSeedkeeperMemory, line: ${Exception().stackTrace[0].lineNumber}"
                 )
-                sids.add(seedkeeperImportSecretResult.sid)
+                sids.add(seedkeeperSecretHeader.sid)
                 secrets.add(secretObject)
-                fingerprints.add(seedkeeperImportSecretResult.fingerprintFromSeedkeeper.toString())
+                fingerprints.add(seedkeeperSecretHeader.fingerprintBytes.toString())
             } catch (error: Exception) {
                 SatoLog.e(TAG, "An error occurred: $error")
                 break
             }
 
             // status todo: new class to hold these values?
-            val rapdu = cmdSet.seedkeeperGetStatus()
-            SatoLog.d(TAG, "seedkeeperStatus is successful call: ${rapdu.sw}")
+            val seedkeeperStatus = cmdSet.seedkeeperGetStatus()
+            SatoLog.d(TAG, "seedkeeperStatus is successful: ${seedkeeperStatus}")
             secretSize += 1
         }
 
@@ -824,8 +809,8 @@ object CardState {
         }
 
         // final status
-        val rapdu = cmdSet.seedkeeperGetStatus()
-        SatoLog.d(TAG, "seedkeeperStatus is successful: ${rapdu.sw}")
+        val seedkeeperStatus = cmdSet.seedkeeperGetStatus()
+        SatoLog.d(TAG, "seedkeeperStatus is successful: ${seedkeeperStatus}")
         nbTestSuccess++
     }
 
@@ -852,15 +837,15 @@ object CardState {
         SatoLog.d(TAG, "Start testImportExportSecretEncrypted")
         try {
             // Get authentikey then import it in plaintext
-            val authentikeyObject: AuthentikeyObject = cmdSet.cardGetSeedkeeperAuthentikey()
-            val authentikeySecretBytes = ByteArray(authentikeyObject.authentikeyBytes.size + 1)
-            authentikeySecretBytes[0] = authentikeyObject.authentikeyBytes.size.toByte()
+            val authentikeyBytes = cmdSet.cardGetAuthentikey()
+            val authentikeySecretBytes = ByteArray(authentikeyBytes.size + 1)
+            authentikeySecretBytes[0] = authentikeyBytes.size.toByte()
             System.arraycopy(
-                authentikeyObject.authentikeyBytes,
+                authentikeyBytes,
                 0,
                 authentikeySecretBytes,
                 1,
-                authentikeyObject.authentikeyBytes.size
+                authentikeyBytes.size
             )
 
             val authentikeyFingerprintBytes =
@@ -887,22 +872,16 @@ object CardState {
             )
 
             // Import secret
-            val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
-                cmdSet.seedkeeperImportSecret(authentikeySecretObject)
-            checkEqual(
-                seedkeeperImportSecretResult.apduResponse.sw,
-                StatusWord.OK.value,
-                "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
-            )
+            val seedkeeperSecretHeader = cmdSet.seedkeeperImportSecret(authentikeySecretObject)
             checkByteArrayEqual(
-                seedkeeperImportSecretResult.fingerprintFromSeedkeeper,
+                seedkeeperSecretHeader.fingerprintBytes,
                 authentikeyFingerprintBytes,
                 "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
             )
 
             // Export the authentikey
             val exportedAuthentikeySecretObject =
-                cmdSet.seedkeeperExportSecret(seedkeeperImportSecretResult.sid, null)
+                cmdSet.seedkeeperExportSecret(seedkeeperSecretHeader.sid, null)
             val exportedAuthentikeySecretHeader = exportedAuthentikeySecretObject.secretHeader
             checkEqual(
                 exportedAuthentikeySecretHeader.type,
@@ -951,17 +930,11 @@ object CardState {
                 // Generate masterseed on card
                 val masterseedExportRights = SeedkeeperExportRights.EXPORT_ENCRYPTED_ONLY
                 val masterseedLabel = "Test masterseed $size bytes export-encrypted"
-                val seedkeeperMasterSeedResult: SeedkeeperMasterSeedResult =
-                    cmdSet.seedkeeperGenerateMasterseed(
+                val seedkeeperMasterSeedResult = cmdSet.seedkeeperGenerateMasterseed(
                         size,
                         masterseedExportRights,
                         masterseedLabel
                     )
-                checkEqual(
-                    seedkeeperMasterSeedResult.apduResponse.sw,
-                    StatusWord.OK.value,
-                    "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
-                )
 
                 // Check last log
                 var logs = cmdSet.seedkeeperPrintLogs(false)
@@ -978,7 +951,7 @@ object CardState {
                 )
                 checkEqual(
                     lastLog.sid1,
-                    seedkeeperMasterSeedResult.headers[0].sid,
+                    seedkeeperMasterSeedResult.sid,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
                 checkEqual(
@@ -996,7 +969,7 @@ object CardState {
                 try {
                     val exportedMasterseedObject =
                         cmdSet.seedkeeperExportSecret(
-                            seedkeeperMasterSeedResult.headers[0].sid,
+                            seedkeeperMasterSeedResult.sid,
                             null
                         )
                     // force fail if it does not throw
@@ -1028,7 +1001,7 @@ object CardState {
                 )
                 checkEqual(
                     lastLog.sid1,
-                    seedkeeperMasterSeedResult.headers[0].sid,
+                    seedkeeperMasterSeedResult.sid,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
                 checkEqual(
@@ -1045,33 +1018,33 @@ object CardState {
                 // Export it encrypted
                 val exportedMasterseedObject =
                     cmdSet.seedkeeperExportSecret(
-                        seedkeeperMasterSeedResult.headers[0].sid,
-                        seedkeeperImportSecretResult.sid
+                        seedkeeperMasterSeedResult.sid,
+                        seedkeeperSecretHeader.sid
                     )
                 val exportedMasterseedHeader = exportedMasterseedObject.secretHeader
                 checkEqual(
                     exportedMasterseedHeader.type,
-                    seedkeeperMasterSeedResult.headers[0].type,
+                    seedkeeperMasterSeedResult.type,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
                 checkEqual(
                     exportedMasterseedHeader.subtype,
-                    seedkeeperMasterSeedResult.headers[0].subtype,
+                    seedkeeperMasterSeedResult.subtype,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
                 checkEqual(
                     exportedMasterseedHeader.origin,
-                    seedkeeperMasterSeedResult.headers[0].origin,
+                    seedkeeperMasterSeedResult.origin,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
                 checkEqual(
                     exportedMasterseedHeader.exportRights,
-                    seedkeeperMasterSeedResult.headers[0].exportRights,
+                    seedkeeperMasterSeedResult.exportRights,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
                 checkByteArrayEqual(
                     exportedMasterseedHeader.fingerprintBytes,
-                    seedkeeperMasterSeedResult.headers[0].fingerprintBytes,
+                    seedkeeperMasterSeedResult.fingerprintBytes,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
 //                checkEqual(
@@ -1081,7 +1054,7 @@ object CardState {
 //                )
                 checkEqual(
                     exportedMasterseedHeader.label,
-                    seedkeeperMasterSeedResult.headers[0].label,
+                    seedkeeperMasterSeedResult.label,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
 
@@ -1104,12 +1077,12 @@ object CardState {
                 )
                 checkEqual(
                     lastLog.sid1,
-                    seedkeeperMasterSeedResult.headers[0].sid,
+                    seedkeeperMasterSeedResult.sid,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
                 checkEqual(
                     lastLog.sid2,
-                    seedkeeperImportSecretResult.sid,
+                    seedkeeperSecretHeader.sid,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
                 checkEqual(
@@ -1119,18 +1092,13 @@ object CardState {
                 )
 
                 // Reimport it encrypted then check if fingerprints match
-                val seedkeeperImportSecretResult2: SeedkeeperImportSecretResult =
-                    cmdSet.seedkeeperImportSecret(
+                val seedkeeperImportSecretResult2 = cmdSet.seedkeeperImportSecret(
                         exportedMasterseedObject
                     )
-                checkEqual(
-                    seedkeeperImportSecretResult2.apduResponse.sw,
-                    StatusWord.OK.value,
-                    "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
-                )
+
                 checkByteArrayEqual(
-                    seedkeeperImportSecretResult2.fingerprintFromSeedkeeper,
-                    seedkeeperMasterSeedResult.headers[0].fingerprintBytes,
+                    seedkeeperImportSecretResult2.fingerprintBytes,
+                    seedkeeperMasterSeedResult.fingerprintBytes,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
 
@@ -1157,7 +1125,7 @@ object CardState {
                 )
                 checkEqual(
                     lastLog.sid2,
-                    seedkeeperImportSecretResult.sid,
+                    seedkeeperSecretHeader.sid,
                     "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                 )
                 checkEqual(
@@ -1169,7 +1137,7 @@ object CardState {
                 // Erase secret if supported
                 if (cardStatus.protocolVersion >= 0x0002) {
                     var rapdu =
-                        cmdSet.seedkeeperResetSecret(seedkeeperMasterSeedResult.headers[0].sid)
+                        cmdSet.seedkeeperResetSecret(seedkeeperMasterSeedResult.sid)
                     checkEqual(
                         rapdu.sw,
                         StatusWord.OK.value,
@@ -1191,7 +1159,7 @@ object CardState {
 
             // Erase authentikey (if supported)
             if (cardStatus.protocolVersion >= 0x0002) {
-                val rapdu = cmdSet.seedkeeperResetSecret(seedkeeperImportSecretResult.sid)
+                val rapdu = cmdSet.seedkeeperResetSecret(seedkeeperSecretHeader.sid)
                 checkEqual(
                     rapdu.sw,
                     StatusWord.OK.value,
@@ -1272,15 +1240,10 @@ object CardState {
             )
 
             // Import secret
-            val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
-                cmdSet.seedkeeperImportSecret(secretObject)
-            checkEqual(
-                seedkeeperImportSecretResult.apduResponse.sw,
-                StatusWord.OK.value,
-                "Function: testBip39MnemonicV2, line: ${Exception().stackTrace[0].lineNumber}"
-            )
+            val seedkeeperImportSecretResult = cmdSet.seedkeeperImportSecret(secretObject)
+
             checkByteArrayEqual(
-                seedkeeperImportSecretResult.fingerprintFromSeedkeeper,
+                seedkeeperImportSecretResult.fingerprintBytes,
                 secretFingerprintBytes,
                 "Function: testBip39MnemonicV2, line: ${Exception().stackTrace[0].lineNumber}"
             )
@@ -1385,15 +1348,10 @@ object CardState {
             null
         )
         // import secret
-        val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
-            cmdSet.seedkeeperImportSecret(secretObject)
-        checkEqual(
-            seedkeeperImportSecretResult.apduResponse.sw,
-            StatusWord.OK.value,
-            "Function: testCardBip32GetExtendedkeySeedVector1, line: ${Exception().stackTrace[0].lineNumber}"
-        )
+        val seedkeeperImportSecretResult = cmdSet.seedkeeperImportSecret(secretObject)
+
         checkByteArrayEqual(
-            seedkeeperImportSecretResult.fingerprintFromSeedkeeper,
+            seedkeeperImportSecretResult.fingerprintBytes,
             secretFingerprintBytes,
             "Function: testCardBip32GetExtendedkeySeedVector1, line: ${Exception().stackTrace[0].lineNumber}"
         )
@@ -1474,15 +1432,10 @@ object CardState {
             null
         )
         // import secret
-        val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
-            cmdSet.seedkeeperImportSecret(secretObject)
-        checkEqual(
-            seedkeeperImportSecretResult.apduResponse.sw,
-            StatusWord.OK.value,
-            "Function: testCardBip32GetExtendedkeySeedVector2, line: ${Exception().stackTrace[0].lineNumber}"
-        )
+        val seedkeeperImportSecretResult = cmdSet.seedkeeperImportSecret(secretObject)
+
         checkByteArrayEqual(
-            seedkeeperImportSecretResult.fingerprintFromSeedkeeper,
+            seedkeeperImportSecretResult.fingerprintBytes,
             secretFingerprintBytes,
             "Function: testCardBip32GetExtendedkeySeedVector2, line: ${Exception().stackTrace[0].lineNumber}"
         )
@@ -1563,15 +1516,10 @@ object CardState {
             null
         )
         // import secret
-        val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
-            cmdSet.seedkeeperImportSecret(secretObject)
-        checkEqual(
-            seedkeeperImportSecretResult.apduResponse.sw,
-            StatusWord.OK.value,
-            "Function: testCardBip32GetExtendedkeySeedVector3, line: ${Exception().stackTrace[0].lineNumber}"
-        )
+        val seedkeeperImportSecretResult = cmdSet.seedkeeperImportSecret(secretObject)
+
         checkByteArrayEqual(
-            seedkeeperImportSecretResult.fingerprintFromSeedkeeper,
+            seedkeeperImportSecretResult.fingerprintBytes,
             secretFingerprintBytes,
             "Function: testCardBip32GetExtendedkeySeedVector3, line: ${Exception().stackTrace[0].lineNumber}"
         )
@@ -1658,15 +1606,9 @@ object CardState {
         )
 
         // import secret
-        val seedkeeperImportSecretResult: SeedkeeperImportSecretResult =
-            cmdSet.seedkeeperImportSecret(secretObject)
-        checkEqual(
-            seedkeeperImportSecretResult.apduResponse.sw,
-            StatusWord.OK.value,
-            "Function: testCardBip32GetExtendedkeyBip85"
-        )
+        val seedkeeperImportSecretResult = cmdSet.seedkeeperImportSecret(secretObject)
         checkByteArrayEqual(
-            seedkeeperImportSecretResult.fingerprintFromSeedkeeper,
+            seedkeeperImportSecretResult.fingerprintBytes,
             secretFingerprintBytes,
             "Function: testCardBip32GetExtendedkeyBip85"
         )

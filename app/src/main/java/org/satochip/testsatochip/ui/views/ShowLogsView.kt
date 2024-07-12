@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import org.satochip.testsatochip.R
 import org.satochip.testsatochip.services.SatoLog
 import org.satochip.testsatochip.ui.components.HeaderRow
+import org.satochip.testsatochip.ui.components.HomeHeaderRow
 import java.util.logging.Level
 
 @SuppressLint("UnrememberedMutableState")

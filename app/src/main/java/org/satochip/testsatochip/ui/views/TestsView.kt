@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import org.satochip.testsatochip.R
 import org.satochip.testsatochip.data.TestItems
 import org.satochip.testsatochip.ui.components.HeaderRow
+import org.satochip.testsatochip.ui.components.HomeHeaderRow
 
 @Composable
 fun TestsView(
@@ -52,10 +53,8 @@ fun TestsView(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            HeaderRow(
-                onClick = {
-                    onClick(TestItems.GoBack)
-                },
+            HomeHeaderRow(
+                onClick = {},
                 titleText = R.string.testsTitle,
                 message = R.string.testsMessage
             )
