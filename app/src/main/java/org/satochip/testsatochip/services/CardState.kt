@@ -179,9 +179,8 @@ object CardState {
 
             SatoLog.d("testSatochip", "card status: $cardStatus")
 
-            testSeedkeeper()
-
             // check if setupDone
+            // TODO: check card type and version, do setup accordingly if needed
             if (cardStatus.isSetupDone == false) {
                 SatoLog.d(TAG, "CardVersionInt: ${getCardVersionInt(cardStatus)}")
                 if (getCardVersionInt(cardStatus!!) <= 0x00010001) {
@@ -190,21 +189,8 @@ object CardState {
                 }
             }
 
-            // check Card authenticity
-            try {
-                var authResults = cmdSet.cardVerifyAuthenticity()
-                if (authResults != null) {
-                    if (authResults[0].compareTo("OK") == 0) {
-                        authenticityStatus.postValue(AuthenticityStatus.Authentic)
-                    } else {
-                        authenticityStatus.postValue(AuthenticityStatus.NotAuthentic)
-                        SatoLog.e(TAG, "readCard failed to authenticate card!")     // issue here.
-                    }
-                    certificateList.postValue(authResults.toMutableList())
-                }
-            } catch (e: Exception) {
-                SatoLog.e(TAG, "Failed to authenticate card with error: $e")
-            }
+            // todo: check cardtype
+            testSeedkeeper()
 
             // get authentikey
             val respApdu = cmdSet.cardGetAuthentikey()
@@ -292,6 +278,10 @@ object CardState {
             TestItems.ResetSecrets -> {
                 resetSecrets()
             }
+            TestItems.CheckAuthenticity -> {
+                testAuthenticity()
+            }
+
             else -> {}
         }
 
@@ -320,11 +310,6 @@ object CardState {
                 exportRights,
                 label
             ) ?: continue
-//            checkEqual(
-//                seedkeeperMasterSeedResult.apduResponse.sw,
-//                StatusWord.OK.value,
-//                tag = "Function: testGenerateMasterseed, line: ${Exception().stackTrace[0].lineNumber}"
-//            )
 
             // check last log
             var logs: List<SeedkeeperLog> = cmdSet.seedkeeperPrintLogs(false) ?: continue
@@ -979,7 +964,7 @@ object CardState {
                         "Function: testImportExportSecretEncrypted, line: ${Exception().stackTrace[0].lineNumber}"
                     )
                 } catch (error: Exception) {
-                    SatoLog.e(TAG, "An error occurred: $error")
+                    SatoLog.d(TAG, "Failed to export secret in plaintext (not allowed by policy): $error")
                 }
 
                 // Test logs for fail
@@ -1687,5 +1672,28 @@ object CardState {
         val rapdu = cmdSet.seedkeeperResetSecret(seedkeeperImportSecretResult.sid)
         checkEqual(rapdu.sw, StatusWord.OK.value, "Function: testCardBip32GetExtendedkeyBip85")
         nbTestSuccess++
+    }
+
+    @Throws(Exception::class)
+    fun testAuthenticity() {
+        SatoLog.d(TAG, "start testAuthenticity")
+        nbTestTotal++
+
+        // check Card authenticity
+        try {
+            var authResults = cmdSet.cardVerifyAuthenticity()
+            if (authResults != null) {
+                if (authResults[0].compareTo("OK") == 0) {
+                    authenticityStatus.postValue(AuthenticityStatus.Authentic)
+                    SatoLog.d(TAG, "card authenticated successfully!")     // issue here.
+                } else {
+                    authenticityStatus.postValue(AuthenticityStatus.NotAuthentic)
+                    SatoLog.e(TAG, "readCard failed to authenticate card!")     // issue here.
+                }
+                certificateList.postValue(authResults.toMutableList())
+            }
+        } catch (e: Exception) {
+            SatoLog.e(TAG, "Failed to authenticate card with error: $e")
+        }
     }
 }
