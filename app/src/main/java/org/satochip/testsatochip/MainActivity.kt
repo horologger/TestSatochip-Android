@@ -20,10 +20,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.serialization.Serializable
 import org.satochip.testsatochip.data.NfcResultCode
-import org.satochip.testsatochip.data.TestItems
 import org.satochip.testsatochip.ui.components.NfcDialog
 import org.satochip.testsatochip.ui.theme.TestSatochipTheme
-import org.satochip.testsatochip.ui.views.HomeView
 import org.satochip.testsatochip.ui.views.ShowLogsView
 import org.satochip.testsatochip.ui.views.TestsView
 import org.satochip.testsatochip.viewmodels.TestSatochipViewModel
@@ -91,45 +89,20 @@ class MainActivity : ComponentActivity() {
 
         NavHost(
             navController = navController,
-            startDestination = HomeView
+            startDestination = TestsView
         ) {
-            composable<HomeView> {
-                HomeView(
-                    onClick = {
-                        showNfcDialog.value = !showNfcDialog.value
-                        viewModel.doTests(context, TestItems.ScanCard)
-                    },
-                    onClickTestsButton = {
-                        navController.navigate(TestsView) {
-                            popUpTo(0)
-                        }
-                    }
-                )
-            }
             composable<TestsView> {
                 TestsView(
                     onClick = { item ->
-                        when (item) {
-                            TestItems.GoBack -> {
-                                navController.navigate(HomeView) {
-                                    popUpTo(0)
-                                }
-                            }
-
-                            else -> {
-                                showNfcDialog.value = !showNfcDialog.value
-                                viewModel.doTests(context, item)
-                            }
-                        }
+                        showNfcDialog.value = !showNfcDialog.value
+                        viewModel.doTests(context, item)
                     }
                 )
             }
             composable<ShowLogsView> {
                 ShowLogsView(
                     onClick = {
-                        navController.navigate(HomeView) {
-                            popUpTo(0)
-                        }
+                        navController.navigateUp()
                     }
                 )
             }
