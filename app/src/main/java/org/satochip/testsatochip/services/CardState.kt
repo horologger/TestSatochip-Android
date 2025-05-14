@@ -172,7 +172,8 @@ object CardState {
         parser = cmdSet.parser
 
         try {
-            val respdu: APDUResponse = cmdSet.cardSelect("seedkeeper").checkOK()
+//          val respdu: APDUResponse = cmdSet.cardSelect("seedkeeper").checkOK()
+            val respdu: APDUResponse = cmdSet.cardSelect("satochip").checkOK()
             val rapduStatus = cmdSet.cardGetStatus()//To update status if it's not the first reading
 
             cardStatus = cmdSet.applicationStatus ?: return
@@ -310,7 +311,7 @@ object CardState {
 
                     // 5. Update counters and status
                     nbTestSuccess++
-                    resultCodeLive.postValue(NfcResultCode.Ok) 
+                    resultCodeLive.postValue(NfcResultCode.Ok)
 
                 } catch (e: Exception) {
                     SatoLog.e("testSatochip", "Sign Message test FAILED: $e")
