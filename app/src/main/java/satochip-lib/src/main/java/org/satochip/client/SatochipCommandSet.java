@@ -281,7 +281,7 @@ public class SatochipCommandSet {
 
         APDUCommand selectApplet;
         if (cardType.equals("satochip")) {
-//          selectApplet = new APDUCommand(0x00, 0xA4, 0x04, 0x00, SATOCHIP_AID); // xxx Find Correct AID for Satochip
+          selectApplet = new APDUCommand(0x00, 0xA4, 0x04, 0x00, SATOCHIP_AID); // xxx Find Correct AID for Satochip
 // From Constants.java in sparrow.io.satochip
 //          /****************************************
 //           * Instruction codes *
@@ -290,7 +290,7 @@ public class SatochipCommandSet {
 //          // Applet initialization
 //          public static final byte INS_SETUP = (byte) 0x2A;
 
-          selectApplet = new APDUCommand(0xB0, 0x2A, 0x04, 0x00, SATOCHIP_AID); // xxx Find Correct AID for Satochip
+//          selectApplet = new APDUCommand(0xB0, 0x2A, 0x04, 0x00, SATOCHIP_AID); // xxx Find Correct AID for Satochip
         } else if (cardType.equals("seedkeeper")) {
             selectApplet = new APDUCommand(0x00, 0xA4, 0x04, 0x00, SEEDKEEPER_AID);
         } else {

@@ -211,7 +211,8 @@ object CardState {
     fun testSeedkeeper() {
         SatoLog.d("testSatochip", "Start Seedkeeper tests")
         val cardStatus = cmdSet.applicationStatus ?: return
-        val pinString = "123456"
+//      val pinString = "123456"
+        val pinString = "qqqq"
         val pinBytes = pinString.toByteArray(Charsets.UTF_8)
         val wrongPinBytes = "0000".toByteArray(Charsets.UTF_8)
         var respApdu = APDUResponse(ByteArray(0), 0x00, 0x00)

@@ -2,6 +2,10 @@ cardSignTransactionHash
 
 // From pysatochip
 ```
+echo -n "This is a test message to sign." | shasum -a 256
+9024b67996b46a5698797aca7018ef309b1343d61ea08e4c1bab10b1fa2da29b
+
+
 .venvZilla:pysatochip i830671$ python3 satochip_cli.py satochip-sign-hash --path "m/84'/0'/0'/0/0" --hash "9024b67996b46a5698797aca7018ef309b1343d61ea08e4c1bab10b1fa2da29b"
 DEBUG: CardConnection.T0_protocol = 1
 DEBUG: CardConnection.T1_protocol = 2
