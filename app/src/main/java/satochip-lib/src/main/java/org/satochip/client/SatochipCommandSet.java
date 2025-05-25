@@ -78,7 +78,7 @@ public class SatochipCommandSet {
         this.secureChannel = new SecureChannelSession();
         this.parser = new SatochipParser();
         this.satodimeStatus = new SatodimeStatus();
-        logger.setLevel(Level.WARNING);
+        logger.setLevel(Level.INFO);
     }
 
     public void setLoggerLevel(String level) {
@@ -860,6 +860,20 @@ public class SatochipCommandSet {
      ****************************************/
 
     public APDUResponse cardSignTransactionHash(byte keynbr, byte[] txhash, byte[] chalresponse) {
+        // Check if secure channel is needed and initialize if required
+        if (status == null) {
+            cardGetStatus();
+        }
+        
+        if (status.needsSecureChannel() && !secureChannel.initializedSecureChannel()) {
+            try {
+                cardInitiateSecureChannel();
+                logger.info("SATOCHIPLIB: Secure channel initiated for transaction signing");
+            } catch (IOException e) {
+                logger.warning("SATOCHIPLIB: Failed to initialize secure channel: " + e.getMessage());
+                throw new RuntimeException("Failed to initialize secure channel for transaction signing", e);
+            }
+        }
 
         byte[] data;
         if (txhash.length != 32) {
