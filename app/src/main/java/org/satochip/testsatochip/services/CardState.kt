@@ -292,7 +292,7 @@ object CardState {
                     // 1. Define the message and path (Path might not be directly used by cardSignTransactionHash)
                     val message = "This is a test message to sign."
                     val messageBytes = message.toByteArray(Charsets.UTF_8)
-                    val path = "m/44'/0'/0'/0/0" // Constants.BIP44_PATH_BTC0_EXTERNAL0
+                    val path = "m/84'/0'/0'/0/0" 
 
                     SatoLog.d("testSatochip", "Signing message: '$message' (Path for context: $path)")
 
@@ -303,6 +303,9 @@ object CardState {
                     // 3. Call the command set method to sign the hash
                     // Assumes key number 0 and no 2FA challenge response
                     val keyNumber: Byte = 0
+                    // val keyNumber: Byte = 1 // TODO: use keyNumber 1
+                    // val keyNumber: Byte = 2
+                    // val keyNumber: Byte = 3
                     val challengeResponse: ByteArray? = null
                     val signResponse: APDUResponse = cmdSet.cardSignTransactionHash(keyNumber, messageHash, challengeResponse).checkOK()
 

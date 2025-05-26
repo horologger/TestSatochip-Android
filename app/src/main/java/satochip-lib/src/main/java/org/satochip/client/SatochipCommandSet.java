@@ -875,10 +875,46 @@ public class SatochipCommandSet {
             }
         }
 
-        byte[] data;
-        if (txhash.length != 32) {
-            throw new RuntimeException("Wrong txhash length (should be 32)");
+        // Validate transaction hash
+        if (txhash == null) {
+            logger.warning("SATOCHIPLIB: Transaction hash is null");
+            throw new IllegalArgumentException("Transaction hash cannot be null");
         }
+        
+        if (txhash.length != 32) {
+            logger.warning("SATOCHIPLIB: Invalid transaction hash length: " + txhash.length + " (expected 32)");
+            throw new IllegalArgumentException("Transaction hash must be 32 bytes");
+        }
+
+        // Log the transaction hash for debugging
+        logger.info("SATOCHIPLIB: Transaction hash to sign: " + Hex.toHexString(txhash));
+
+        // Validate key number
+        if (keynbr < 0 || keynbr > 3) {
+            logger.warning("SATOCHIPLIB: Invalid key number: " + keynbr);
+            throw new IllegalArgumentException("Key number must be between 0 and 3");
+        }
+
+        // Verify key derivation
+        try {
+            logger.info("SATOCHIPLIB: Verifying key derivation for key slot " + keynbr);
+            // Try to get the extended key first
+            if (defaultBip32path == null) {
+                defaultBip32path = "m/44'/60'/0'/0/0";
+            }
+            logger.info("SATOCHIPLIB: Using BIP32 path: " + defaultBip32path);
+            byte[][] extendedKeyData = cardBip32GetExtendedKey();
+            if (extendedKeyData == null || extendedKeyData.length < 2) {
+                logger.warning("SATOCHIPLIB: Failed to get extended key data");
+                throw new RuntimeException("Failed to get extended key data");
+            }
+            logger.info("SATOCHIPLIB: Successfully derived key for slot " + keynbr);
+        } catch (Exception e) {
+            logger.warning("SATOCHIPLIB: Failed to verify key derivation: " + e.getMessage());
+            throw new RuntimeException("Failed to verify key derivation", e);
+        }
+
+        byte[] data;
         if (chalresponse == null) {
             data = new byte[32];
             System.arraycopy(txhash, 0, data, 0, txhash.length);
@@ -891,14 +927,48 @@ public class SatochipCommandSet {
             data[offset++] = (byte) 0x00;
             System.arraycopy(chalresponse, 0, data, offset, chalresponse.length);
         } else {
-            throw new RuntimeException("Wrong challenge-response length (should be 20)");
+            logger.warning("SATOCHIPLIB: Invalid challenge-response length: " + chalresponse.length + " (expected 20)");
+            throw new IllegalArgumentException("Challenge-response must be 20 bytes");
         }
-        APDUCommand plainApdu = new APDUCommand(0xB0, INS_SIGN_TRANSACTION_HASH, keynbr, 0x00, data);
 
-        logger.info("SATOCHIPLIB: C-APDU cardSignTransactionHash:" + plainApdu.toHexString());
+        // Create and log the raw APDU command
+        // APDUCommand plainApdu = new APDUCommand(0xB0, INS_SIGN_TRANSACTION_HASH, keynbr, 0x00, data);
+        APDUCommand plainApdu = new APDUCommand(0xB0, INS_SIGN_TRANSACTION_HASH, 0xff, 0x00, data);
+        try {
+            byte[] rawApdu = plainApdu.serialize();
+            logger.info("SATOCHIPLIB: Raw APDU command bytes: " + Hex.toHexString(rawApdu));
+            logger.info("SATOCHIPLIB: APDU command details - CLA: 0x" + String.format("%02X", rawApdu[0]) + 
+                       ", INS: 0x" + String.format("%02X", rawApdu[1]) + 
+                       ", P1: 0x" + String.format("%02X", rawApdu[2]) + 
+                       ", P2: 0x" + String.format("%02X", rawApdu[3]) + 
+                       ", Lc: 0x" + String.format("%02X", rawApdu[4]));
+            if (rawApdu.length > 5) {
+                logger.info("SATOCHIPLIB: APDU data: " + Hex.toHexString(Arrays.copyOfRange(rawApdu, 5, rawApdu.length)));
+            }
+        } catch (IOException e) {
+            logger.warning("SATOCHIPLIB: Failed to serialize APDU command: " + e.getMessage());
+            throw new RuntimeException("Failed to serialize APDU command", e);
+        }
+
+        // xxx what is ff doing here?
+
+        // plainApdu = b0 7a ff 00 36 90 24 b6 79 96 b4 6a 56 98 79 7a ca 70 18 ef 30 9b 13 43 d6 1e a0 8e 4c 1b ab 10 b1 fa 2d a2 9b 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
         APDUResponse respApdu = this.cardTransmit(plainApdu);
         logger.info("SATOCHIPLIB: R-APDU cardSignTransactionHash:" + respApdu.toHexString());
-        // TODO: check SW code for particular status
+
+        // Check for specific error codes
+        int sw = respApdu.getSw();
+        if (sw == 0x9C10) {
+            logger.warning("SATOCHIPLIB: Transaction signing failed - Invalid key number or key not authorized");
+            throw new RuntimeException("Transaction signing failed - Invalid key number or key not authorized");
+        } else if (sw == 0x9C06) {
+            logger.warning("SATOCHIPLIB: Transaction signing failed - PIN verification required");
+            throw new RuntimeException("Transaction signing failed - PIN verification required");
+        } else if (sw != 0x9000) {
+            logger.warning("SATOCHIPLIB: Transaction signing failed with status word: " + String.format("0x%04X", sw));
+            throw new RuntimeException("Transaction signing failed with status word: " + String.format("0x%04X", sw));
+        }
 
         return respApdu;
     }
