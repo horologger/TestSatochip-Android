@@ -26,6 +26,7 @@ import org.satochip.testsatochip.data.AuthenticityStatus
 import org.satochip.testsatochip.data.NfcResultCode
 import org.satochip.testsatochip.data.TestItems
 import java.time.Instant
+import java.security.MessageDigest
 
 private const val TAG = "CardState"
 
@@ -171,7 +172,8 @@ object CardState {
         parser = cmdSet.parser
 
         try {
-            val respdu: APDUResponse = cmdSet.cardSelect("seedkeeper").checkOK()
+//          val respdu: APDUResponse = cmdSet.cardSelect("seedkeeper").checkOK()
+            val respdu: APDUResponse = cmdSet.cardSelect("satochip").checkOK()
             val rapduStatus = cmdSet.cardGetStatus()//To update status if it's not the first reading
 
             cardStatus = cmdSet.applicationStatus ?: return
@@ -209,7 +211,8 @@ object CardState {
     fun testSeedkeeper() {
         SatoLog.d("testSatochip", "Start Seedkeeper tests")
         val cardStatus = cmdSet.applicationStatus ?: return
-        val pinString = "123456"
+//      val pinString = "123456"
+        val pinString = "qqqq"
         val pinBytes = pinString.toByteArray(Charsets.UTF_8)
         val wrongPinBytes = "0000".toByteArray(Charsets.UTF_8)
         var respApdu = APDUResponse(ByteArray(0), 0x00, 0x00)
@@ -281,7 +284,48 @@ object CardState {
             TestItems.CheckAuthenticity -> {
                 testAuthenticity()
             }
+            TestItems.SignMessage -> {
+                try {
+                    SatoLog.d("testSatochip", "Executing Sign Transaction Hash test...")
+                    nbTestTotal++
 
+                    // 1. Define the message and path (Path might not be directly used by cardSignTransactionHash)
+                    val message = "This is a test message to sign."
+                    val messageBytes = message.toByteArray(Charsets.UTF_8)
+                    val path = "m/84'/0'/0'/0/0" 
+
+                    SatoLog.d("testSatochip", "Signing message: '$message' (Path for context: $path)")
+
+                    // 2. Hash the message (SHA-256 recommended for 32 bytes)
+                    val messageHash = MessageDigest.getInstance("SHA-256").digest(messageBytes)
+                    SatoLog.d("testSatochip", "Message SHA-256 hash (hex): ${messageHash.toHexString()}")
+
+                    // 3. Call the command set method to sign the hash
+                    // Assumes key number 0 and no 2FA challenge response
+                    // val keyNumber: Byte = 0
+                    // val keyNumber: Byte = 1 // TODO: use keyNumber 1
+                    // val keyNumber: Byte = 2
+                    // val keyNumber: Byte = 3
+                    val keyNumber: Byte = 0xFF.toByte()
+                    val challengeResponse: ByteArray? = null
+                    val signResponse: APDUResponse = cmdSet.cardSignTransactionHash(keyNumber, messageHash, challengeResponse).checkOK()
+
+                    // 4. Process the signature
+                    val signature = signResponse.data
+                    SatoLog.d("testSatochip", "Message hash signed successfully! Signature (hex): ${signature.toHexString()}")
+
+                    // 5. Update counters and status
+                    nbTestSuccess++
+                    resultCodeLive.postValue(NfcResultCode.Ok)
+
+                } catch (e: Exception) {
+                    SatoLog.e("testSatochip", "Sign Transaction Hash test FAILED: $e")
+                    resultCodeLive.postValue(NfcResultCode.UnknownError)
+                }
+            }
+            TestItems.DoNothing -> {
+                SatoLog.d("testSatochip", "Do nothing test")
+            }
             else -> {}
         }
 

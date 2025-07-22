@@ -27,6 +27,7 @@ import org.satochip.testsatochip.R
 import org.satochip.testsatochip.data.TestItems
 import org.satochip.testsatochip.ui.components.HeaderRow
 import org.satochip.testsatochip.ui.components.HomeHeaderRow
+import android.util.Log
 
 @Composable
 fun TestsView(
@@ -58,33 +59,35 @@ fun TestsView(
                 titleText = R.string.testsTitle,
                 message = R.string.testsMessage
             )
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(testItems.chunked(2)) { pair ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        pair.forEach { item ->
-                            Button(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(4.dp),
-                                onClick = {
-                                    onClick(item)
-                                },
-                            ) {
-                                Text(
-                                    text = item.value,
-                                    style = TextStyle(
-                                        color = Color.Black
-                                    ),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+            Column(modifier = Modifier.weight(1f)) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(testItems.chunked(2)) { pair ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            pair.forEach { item ->
+                                Button(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(4.dp),
+                                    onClick = {
+                                        onClick(item)
+                                    },
+                                ) {
+                                    Text(
+                                        text = item.value,
+                                        style = TextStyle(
+                                            color = Color.Black
+                                        ),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
