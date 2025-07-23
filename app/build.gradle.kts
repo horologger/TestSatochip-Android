@@ -75,7 +75,7 @@ dependencies {
     //satochip libraries
     // implementation(files("libs/satochip-lib-0.0.4.jar")) // older
     // implementation(files("libs/satochip-lib-0.1.0.jar")) old
-    implementation(files("libs/satochip-lib-0.2.4.jar"))
+    implementation(files("libs/satochip-lib-0.2.5.jar"))
     implementation(files("libs/satochip-android-0.0.2.jar"))
 
     //satochip-android & satochip-lib related dependencies
