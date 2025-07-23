@@ -50,43 +50,93 @@ fun TestsView(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 20.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+                .padding(top = 10.dp),
+            verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HomeHeaderRow(
                 onClick = {},
-                titleText = R.string.testsTitle,
-                message = R.string.testsMessage
+                titleText = R.string.testsTitle
             )
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(top = 20.dp)
+            ) {
                 LazyColumn(
                     modifier = Modifier.weight(1f)
                 ) {
-                    items(testItems.chunked(2)) { pair ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            pair.forEach { item ->
-                                Button(
+                    items(testItems) { item ->
+                        // Special handling for Sign Transaction Hash and Sign Schnorr Hash buttons
+                        if (item == TestItems.SignMessage || item == TestItems.SignSchnorrHash) {
+                            Button(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                onClick = {
+                                    onClick(item)
+                                },
+                            ) {
+                                Text(
+                                    text = item.value,
+                                    style = TextStyle(
+                                        color = Color.White
+                                    ),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        } else {
+                            // Regular 2-column layout for other buttons
+                            val remainingItems = testItems.filter { it != TestItems.SignMessage && it != TestItems.SignSchnorrHash }
+                            val itemIndex = remainingItems.indexOf(item)
+                            if (itemIndex % 2 == 0) {
+                                val nextItem = if (itemIndex + 1 < remainingItems.size) remainingItems[itemIndex + 1] else null
+                                Row(
                                     modifier = Modifier
-                                        .weight(1f)
-                                        .padding(4.dp),
-                                    onClick = {
-                                        onClick(item)
-                                    },
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(
-                                        text = item.value,
-                                        style = TextStyle(
-                                            color = Color.Black
-                                        ),
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    Button(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(4.dp),
+                                        onClick = {
+                                            onClick(item)
+                                        },
+                                    ) {
+                                        Text(
+                                            text = item.value,
+                                            style = TextStyle(
+                                                color = Color.White
+                                            ),
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    if (nextItem != null) {
+                                        Button(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(4.dp),
+                                            onClick = {
+                                                onClick(nextItem)
+                                            },
+                                        ) {
+                                            Text(
+                                                text = nextItem.value,
+                                                style = TextStyle(
+                                                    color = Color.White
+                                                ),
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    } else {
+                                        // Empty space to maintain layout
+                                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
+                                    }
                                 }
                             }
                         }

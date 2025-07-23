@@ -323,6 +323,74 @@ object CardState {
                     resultCodeLive.postValue(NfcResultCode.UnknownError)
                 }
             }
+            TestItems.SignSchnorrHash -> {
+                try {
+                    SatoLog.d("testSatochip", "Executing Sign Schnorr Hash test...")
+                    nbTestTotal++
+
+                    // 1. Define the message and path (Path might not be directly used by cardSignSchnorrHash)
+                    val message = "This is a test message to sign with Schnorr."
+                    val messageBytes = message.toByteArray(Charsets.UTF_8)
+                    val path = "m/86'/0'/0'/0/0" 
+
+                    SatoLog.d("testSatochip", "Signing message with Schnorr: '$message' (Path for context: $path)")
+
+// I have added a 'bypass_tweak' argument since for Nostr, the private key does not use tweaking (contrary to Taproot).
+
+// The steps are the following: 
+// 1. derive a BIP32 key using cardBip32GetExtendedKey()
+
+// byte[][] extendedKey = cmdSet.cardBip32GetExtendedKey(path);
+// byte[] publicKey = extendedKey[0];
+// byte[] chainCode = extendedKey[1];
+
+// 2. bypass tweak using cardTaprootTweakPrivkey() with correct argument (Schnorr alg uses another privkey slot, that's why this call is needed even when tweak is not used)
+/**
+* This function tweak the currently available private stored in the Satochip.
+* Tweaking is based on the 'taproot_tweak_seckey(seckey0, h)' algorithm specification defined here:
+* https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki#constructing-and-spending-taproot-outputs
+* <p>
+* ins: 0x7C
+* p1: key number or 0xFF for the last derived Bip32 extended key
+* p2: 0x00 for key tweak, 0x01 to bypass tweak
+* data: [hash(32b) | option: 2FA-flag(2b)|hmac(20b)]
+* return: [sig]
+*/
+// tweak the bip32 key according to bip341
+val keynbr: Byte = 0xFF.toByte()
+val tweak: ByteArray? = null
+
+val tweakResponse: APDUResponse = cmdSet.cardTaprootTweakPrivkey(keynbr, 0x01.toByte(), tweak)
+ 
+// 3. call cardSignSchnorrHash() with the hash of the message to sign
+
+                    // 2. Hash the message (SHA-256 recommended for 32 bytes)
+                    val messageHash = MessageDigest.getInstance("SHA-256").digest(messageBytes)
+                    SatoLog.d("testSatochip", "Message SHA-256 hash (hex): ${messageHash.toHexString()}")
+
+                    // 3. Call the command set method to sign the hash with Schnorr
+                    // Assumes key number 0 and no 2FA challenge response
+                    // val keyNumber: Byte = 0
+                    // val keyNumber: Byte = 1 // TODO: use keyNumber 1
+                    // val keyNumber: Byte = 2
+                    // val keyNumber: Byte = 3
+                    val keyNumber: Byte = 0xFF.toByte()
+                    val challengeResponse: ByteArray? = null
+                    val signResponse: APDUResponse = cmdSet.cardSignSchnorrHash(keyNumber, messageHash, challengeResponse).checkOK()
+
+                    // 4. Process the signature
+                    val signature = signResponse.data
+                    SatoLog.d("testSatochip", "Message hash signed successfully with Schnorr! Signature (hex): ${signature.toHexString()}")
+
+                    // 5. Update counters and status
+                    nbTestSuccess++
+                    resultCodeLive.postValue(NfcResultCode.Ok)
+
+                } catch (e: Exception) {
+                    SatoLog.e("testSatochip", "Sign Schnorr Hash test FAILED: $e")
+                    resultCodeLive.postValue(NfcResultCode.UnknownError)
+                }
+            }
             TestItems.DoNothing -> {
                 SatoLog.d("testSatochip", "Do nothing test")
             }

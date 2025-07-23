@@ -16,5 +16,6 @@ enum class TestItems(val value: String) {
     CardBip32GetExtendedKeyBip85("bip32 get extended key bip85"),
     ResetSecrets("Reset secrets"),
     CheckAuthenticity("Check authenticity"),
-    SignMessage("Sign Transaction Hash")
+    SignMessage("Sign Transaction Hash"),
+    SignSchnorrHash("Sign Schnorr Hash")
 }
