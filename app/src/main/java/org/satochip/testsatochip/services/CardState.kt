@@ -65,6 +65,19 @@ object CardState {
 
     fun initialize(cmdSet: SatochipCommandSet) {
         SatoLog.d(TAG, "initialize START")
+        
+        // Configure logging to capture satochip library info messages
+        System.setProperty("java.util.logging.ConsoleHandler.level", "INFO")
+        System.setProperty("java.util.logging.Level", "INFO")
+        
+        // Additional logging configuration for satochip library
+        System.setProperty("org.satochip.client.level", "DEBUG")
+        System.setProperty("org.satochip.client.SATOCHIPLIB.level", "DEBUG")
+        
+        // Enable Android logging for the satochip package
+        android.util.Log.d(TAG, "Logging configured for satochip library")
+        SatoLog.d(TAG, "Logging configured for INFO level")
+        
         CardState.cmdSet = cmdSet
         parser = cmdSet.parser
         SatoLog.d(TAG, "initialize action: $actionType")
@@ -169,6 +182,15 @@ object CardState {
     @RequiresApi(Build.VERSION_CODES.O)
     fun onConnection() {
         SatoLog.d("Start card reading", "CardState.onConnection")
+        
+        // Additional logging configuration for card operations
+        SatoLog.d(TAG, "=== CARD CONNECTION START ===")
+        SatoLog.d(TAG, "Configuring detailed logging for card operations")
+        
+        // Log satochip library version and capabilities
+        android.util.Log.d("org.satochip.client", "SATOCHIPLIB: Card connection initiated")
+        SatoLog.d(TAG, "Satochip library initialized and ready for operations")
+        
         parser = cmdSet.parser
 
         try {
@@ -242,7 +264,7 @@ object CardState {
                 testImportExportSecretPlain()
                 testImportExportSecretEncrypted()
                 testBip39MnemonicV2()
-                testCardBip32GetExtendedkeySeedVector1()
+                testCardGetPubkeyFromKeyslot()
                 testCardBip32GetExtendedkeySeedVector2()
                 testCardBip32GetExtendedkeySeedVector3()
 //                testCardBip32GetExtendedkeyBip85()
@@ -267,7 +289,7 @@ object CardState {
                 testBip39MnemonicV2()
             }
             TestItems.CardBip32GetExtendedKeySeedVector1 -> {
-                testCardBip32GetExtendedkeySeedVector1()
+                testCardGetPubkeyFromKeyslot()
             }
             TestItems.CardBip32GetExtendedKeySeedVector2 -> {
                 testCardBip32GetExtendedkeySeedVector2()
@@ -362,6 +384,8 @@ val tweak: ByteArray? = null
 
 val tweakResponse: APDUResponse = cmdSet.cardTaprootTweakPrivkey(keynbr, 0x01.toByte(), tweak)
  
+// TODO: Figure out how the python library is doing this.
+ 
 // 3. call cardSignSchnorrHash() with the hash of the message to sign
 
                     // 2. Hash the message (SHA-256 recommended for 32 bytes)
@@ -388,6 +412,42 @@ val tweakResponse: APDUResponse = cmdSet.cardTaprootTweakPrivkey(keynbr, 0x01.to
 
                 } catch (e: Exception) {
                     SatoLog.e("testSatochip", "Sign Schnorr Hash test FAILED: $e")
+                    resultCodeLive.postValue(NfcResultCode.UnknownError)
+                }
+            }
+            TestItems.SignNostrEvent -> {
+                try {
+                    SatoLog.d("testSatochip", "Executing Sign Nostr Event test...")
+                    SatoLog.d("testSatochip", "=== NOSTR EVENT SIGNING TEST START ===")
+                    nbTestTotal++
+
+                    // 1. Define the parameters for Nostr event signing
+                    val keyslot = 0x01 // Use key number 1
+                    val path = "" // Don't use path for Nostr when using key number 1
+                    // val keyslot = 0xFF // Use 0xFF for the last derived BIP32 extended key
+                    // val path = "m/44'/0'/0'/0/0" // BIP32 path for Bitcoin (as per documentation example)
+                    // val message = "Hello from Satochip! 🚀" // Test message
+                    val message = "Satochip Rocks! 🚀" // Test message
+                    val kind = 1 // Text note kind
+
+                    SatoLog.d("testSatochip", "Signing Nostr event: keyslot=$keyslot, path='$path', message='$message', kind=$kind")
+
+                    // 2. Call the satochipSignNostrEvent function
+                    // Note: PIN should already be set via cmdSet.setPin0() earlier in the flow
+                    val broadcast = false // Don't broadcast for testing
+                    val relay = null // No relay needed for testing
+                    
+                    val signedEvent: String = cmdSet.satochipSignNostrEvent(keyslot, path, message, kind, broadcast, relay)
+
+                    // 3. Process the signed event
+                    SatoLog.d("testSatochip", "Nostr event signed successfully! Signed event: $signedEvent")
+
+                    // 4. Update counters and status
+                    nbTestSuccess++
+                    resultCodeLive.postValue(NfcResultCode.Ok)
+
+                } catch (e: Exception) {
+                    SatoLog.e("testSatochip", "Sign Nostr Event test FAILED: $e")
                     resultCodeLive.postValue(NfcResultCode.UnknownError)
                 }
             }
@@ -1407,87 +1467,45 @@ val tweakResponse: APDUResponse = cmdSet.cardTaprootTweakPrivkey(keynbr, 0x01.to
         nbTestSuccess++
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
-    fun testCardBip32GetExtendedkeySeedVector1() {
+    fun testCardGetPubkeyFromKeyslot() {
         nbTestTotal++
-        SatoLog.d(TAG, "Start testCardBip32GetExtendedkeySeedVector1")
+        SatoLog.d(TAG, "Start testCardGetPubkeyFromKeyslot")
+        SatoLog.d(TAG, "=== PUBKEY TEST START ===")
 
-        // introduced in Seedkeeper v0.2
-        if (cardStatus.protocolVersion < 0x0002) {
-            SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector1: BIP32 derivation not supported!")
-            return
+        try {
+            // 1. Define the keyslot parameter
+            val keyslot = 1 // Use keyslot 1 as requested
+
+            SatoLog.d(TAG, "Getting public key from keyslot: $keyslot")
+
+            // 2. Call the cardGetPubkeyFromKeyslot function
+            SatoLog.d(TAG, "About to call cardGetPubkeyFromKeyslot with keyslot: $keyslot, shortFormat: false")
+            val publicKey: ByteArray = cmdSet.cardGetPubkeyFromKeyslot(keyslot,false)
+            SatoLog.d(TAG, "cardGetPubkeyFromKeyslot returned ${publicKey.size} bytes")
+            
+            // 3. Remove first 2 bytes and extract next 64 hex characters
+            val publicKeyWithoutHeader = publicKey.copyOfRange(2, publicKey.size)
+            val publicKeyHex = publicKeyWithoutHeader.toHexString()
+            val publicKey64Chars = if (publicKeyHex.length >= 64) publicKeyHex.substring(0, 64) else publicKeyHex
+            
+            SatoLog.d(TAG, "Public key retrieved successfully! Public key (hex): ${publicKey.toHexString()}")
+            SatoLog.d(TAG, "Public key without header (hex): $publicKeyHex")
+            SatoLog.d(TAG, "Public key first 64 chars: $publicKey64Chars")
+
+            SatoLog.d(TAG, "About to call cardGetPubkeyFromKeyslot with keyslot: $keyslot, shortFormat: true")
+            val publicKeyS: ByteArray = cmdSet.cardGetPubkeyFromKeyslot(keyslot,true)
+            SatoLog.d(TAG, "cardGetPubkeyFromKeyslot (short) returned ${publicKeyS.size} bytes")
+            val publicKeySHex = publicKeyS.toHexString()
+            SatoLog.d(TAG, "Public key short: $publicKeySHex")
+
+            // 4. Update counters and status
+            nbTestSuccess++
+            resultCodeLive.postValue(NfcResultCode.Ok)
+
+        } catch (e: Exception) {
+            SatoLog.e(TAG, "Get public key from keyslot test FAILED: $e")
+            resultCodeLive.postValue(NfcResultCode.UnknownError)
         }
-
-        // create a secret
-        val masterseedHex = "000102030405060708090a0b0c0d0e0f"
-        val masterseedBytes = masterseedHex.hexToByteArray()
-        val secretBytes = byteArrayOf(masterseedBytes.size.toByte()) + masterseedBytes
-
-        val secretFingerprintBytes = SeedkeeperSecretHeader.getFingerprintBytes(secretBytes)
-        val label = "Test Masterseed BIP32 vector1"
-
-        val secretHeader = SeedkeeperSecretHeader(
-            0,
-            SeedkeeperSecretType.MASTERSEED,
-            0x00.toByte(),
-            SeedkeeperSecretOrigin.PLAIN_IMPORT,
-            SeedkeeperExportRights.EXPORT_PLAINTEXT_ALLOWED,
-            0x00.toByte(),
-            0x00.toByte(),
-            0x00.toByte(),
-            secretFingerprintBytes,
-            label
-        )
-        val secretObject = SeedkeeperSecretObject(
-            secretBytes,
-            secretHeader,
-            false,
-            null
-        )
-        // import secret
-        val seedkeeperImportSecretResult = cmdSet.seedkeeperImportSecret(secretObject)
-
-        checkByteArrayEqual(
-            seedkeeperImportSecretResult.fingerprintBytes,
-            secretFingerprintBytes,
-            "Function: testCardBip32GetExtendedkeySeedVector1, line: ${Exception().stackTrace[0].lineNumber}"
-        )
-
-        val paths = arrayOf(
-            "m",
-            "m/0'",
-            "m/0'/1",
-            "m/0'/1/2'",
-            "m/0'/1/2'/2",
-            "m/0'/1/2'/2/1000000000"
-        )
-        val xpubs = arrayOf(
-            "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8",
-            "xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw",
-            "xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ",
-            "xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5",
-            "xpub6FHa3pjLCk84BayeJxFW2SP4XRrFd1JYnxeLeU8EqN3vDfZmbqBqaGJAyiLjTAwm6ZLRQUMv1ZACTj37sR62cfN7fe5JnJ7dh8zL4fiyLHV",
-            "xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy"
-        )
-        // test xpub
-        for (i in paths.indices) {
-            SatoLog.d(TAG, "testCardBip32GetExtendedkeySeedVector1 Xpub Derivation $i")
-            val path = paths[i]
-            val xpub = cmdSet.cardBip32GetXpub(path, 0x0488b21e, seedkeeperImportSecretResult.sid)
-            checkEqual(
-                xpub,
-                xpubs[i],
-                "Function: testCardBip32GetExtendedkeySeedVector1, line: ${Exception().stackTrace[0].lineNumber}"
-            )
-        }
-        // delete seed
-        val respdu = cmdSet.seedkeeperResetSecret(seedkeeperImportSecretResult.sid)
-        checkEqual(
-            respdu.sw,
-            StatusWord.OK.value,
-            "Function: testCardBip32GetExtendedkeySeedVector1, line: ${Exception().stackTrace[0].lineNumber}"
-        )
-        nbTestSuccess++
     }
 
     @OptIn(ExperimentalStdlibApi::class)

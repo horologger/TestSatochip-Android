@@ -67,8 +67,8 @@ fun TestsView(
                     modifier = Modifier.weight(1f)
                 ) {
                     items(testItems) { item ->
-                        // Special handling for Sign Transaction Hash and Sign Schnorr Hash buttons
-                        if (item == TestItems.SignMessage || item == TestItems.SignSchnorrHash) {
+                        // Special handling for Sign Transaction Hash, Sign Schnorr Hash, and Sign Nostr Event buttons
+                        if (item == TestItems.SignMessage || item == TestItems.SignSchnorrHash || item == TestItems.SignNostrEvent) {
                             Button(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -88,7 +88,7 @@ fun TestsView(
                             }
                         } else {
                             // Regular 2-column layout for other buttons
-                            val remainingItems = testItems.filter { it != TestItems.SignMessage && it != TestItems.SignSchnorrHash }
+                            val remainingItems = testItems.filter { it != TestItems.SignMessage && it != TestItems.SignSchnorrHash && it != TestItems.SignNostrEvent }
                             val itemIndex = remainingItems.indexOf(item)
                             if (itemIndex % 2 == 0) {
                                 val nextItem = if (itemIndex + 1 < remainingItems.size) remainingItems[itemIndex + 1] else null

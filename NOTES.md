@@ -1,7 +1,9 @@
 # Build and run the app
 ```
+./gradlew --refresh-dependencies
 ./gradlew assembleDebug -x lint 
 adb install app/build/outputs/apk/debug/app-debug.apk 
+./gradlew installDebug
 adb shell am start -n org.satochip.testsatochip/.MainActivity 
-adb logcat | grep -E "(NFC|Satochip|TestSatochip)"
+adb logcat | grep -E "(NFC|Satochip|TestSatochip|SATOCHIPLIB)"
 ```
